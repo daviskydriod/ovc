@@ -1,4 +1,5 @@
 -- OVC project import template for phpMyAdmin. Dashboard image uploads are also supported.
+-- To create all 23 client-image entries as unpublished drafts, import projects-seed-drafts.sql instead.
 -- First choose a title, factual description, category, slug and image for each project.
 -- Replace every REPLACE_ME value before uncommenting/running the INSERT.
 -- New records default to draft. Change status to 'published' only after review.

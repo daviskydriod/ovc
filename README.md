@@ -18,10 +18,10 @@ Open `http://localhost:3000`. Quality checks: `npm run typecheck` and `npm run b
 - `/` — Home page with seven content sections.
 - `/about` — Company information, service focus and process sections.
 - `/services` — Service directory, scope guidance and enquiry sections.
-- `/projects` — Client-supplied gallery plus published CMS project records.
+- `/projects` — Published project records loaded from the PHP API.
 - `/projects/[slug]` — Project detail pages generated at build time for published records; additional slugs render on demand.
 - `/contact` — Direct phone/WhatsApp contact options for every supplied number, project enquiry form and practical contact guidance.
-- `/admin` — Protected content studio for page copy, client image selection, project CRUD, uploads and enquiries.
+- `/admin` — Protected Projects and Enquiries dashboard with project image uploads.
 - `/sitemap.xml` and `/robots.txt` — SEO metadata routes. Published project slugs are added to the sitemap.
 
 Each public marketing page contains at least seven distinct content sections. Canonical URLs, page metadata, sitemap, Open Graph information and semantic headings are provided. Public pages use Next.js pre-rendering and incremental revalidation at five-minute intervals when the PHP API is configured; newly published project routes are statically generated where available and rendered on-demand otherwise.
@@ -38,11 +38,11 @@ The original master logo remains unchanged in `public/brand/ovc-master-logo.png`
 
 ## PHP/MySQL backend and admin dashboard
 
-The full endpoint guide is [`backend/README.md`](backend/README.md); machine-readable OpenAPI 3.1 is [`backend/openapi.yaml`](backend/openapi.yaml). Import `backend/database/schema.sql` once into the existing OVC database: it contains the full current schema and safely applies the supported earlier OVC column/index updates. The API uses one privately configured administrator and does not create or require a website `users` table. The cPanel archive includes the PHP API source, single SQL import, configuration examples and deployment guide.
+The full endpoint guide is [`backend/README.md`](backend/README.md); machine-readable OpenAPI 3.1 is [`backend/openapi.yaml`](backend/openapi.yaml). Import `backend/database/schema.sql` into the existing OVC database: it contains the current schema, applies supported additive upgrades, and creates a `users` table for administrator accounts. Credentials are verified from MySQL using PHP password hashes; no plaintext password is stored. The cPanel archive includes the PHP API, schema, admin-user SQL template, optional project draft seed, configuration examples and deployment guide.
 
 The `/admin` dashboard is scoped to two areas: Projects and Enquiries. Authorized administrators can add and maintain project records, upload and select project images, and view every submitted enquiry field. GitHub-hosted `cover_url` values can also be added through SQL. The dashboard does not expose page-copy editing for Home, About, Services or Contact. The public Projects listing reads published records and cover URLs from the PHP API; it no longer mixes in the static client-image gallery.
 
-For cPanel, set the `api.ovcconstructions.com` document root to the PHP backend's `public/` directory while keeping `src/`, `database/` and configuration private; back up the existing database and import `backend/database/schema.sql` to apply the `cover_url` update. Copy `backend/.env.example` to `backend/.env` beside `public/` and enter the private MySQL credentials and single admin username/password hash there; the PHP bootstrap loads it automatically, and the backend-root `.htaccess` denies web requests for `.env*`. Set `NEXT_PUBLIC_CMS_API_URL=https://api.ovcconstructions.com/api` in the Next.js host's build settings and allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. Use `backend/database/project-import-template.sql` to add projects with direct GitHub image links. Never commit real passwords or `.env` files.
+For cPanel, set the `api.ovcconstructions.com` document root to the PHP backend's `public/` directory while keeping `src/`, `database/` and configuration private. Back up the existing database and import `backend/database/schema.sql`; replace the hash placeholder in `backend/database/admin-user-template.sql` and import it to create the first administrator. Copy `backend/.env.example` to `backend/.env` beside `public/` for private database/runtime settings; admin usernames and hashes no longer belong in `.env`. Set `NEXT_PUBLIC_CMS_API_URL=https://api.ovcconstructions.com/api` in the Next.js host's build settings and allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. Import `backend/database/projects-seed-drafts.sql` to add all client images as unpublished drafts, or use `backend/database/project-import-template.sql` for selected approved entries. Never commit real passwords or `.env` files.
 
 ## Production domain and hosting
 

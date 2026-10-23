@@ -99,9 +99,16 @@ function db(): PDO {
     return $pdo;
 }
 
-/** Require an authenticated administrator session. */
+/** Require a valid session backed by an active administrator account in MySQL. */
 function require_admin(): void {
-    if (empty($_SESSION['admin_authenticated'])) json_response(['error' => 'Authentication required.'], 401);
+    $userId = (int)($_SESSION['admin_user_id'] ?? 0);
+    if (empty($_SESSION['admin_authenticated']) || $userId < 1) json_response(['error' => 'Authentication required.'], 401);
+    $stmt = db()->prepare("SELECT username, display_name FROM users WHERE id = :id AND role = 'admin' AND is_active = 1 LIMIT 1");
+    $stmt->execute(['id' => $userId]);
+    $user = $stmt->fetch();
+    if (!$user) { $_SESSION = []; json_response(['error' => 'Administrator account is inactive or no longer exists.'], 401); }
+    $_SESSION['admin_username'] = $user['username'];
+    $_SESSION['admin_display_name'] = $user['display_name'];
 }
 
 /** Require the CSRF token returned by the login/session endpoint. */

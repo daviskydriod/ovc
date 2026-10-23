@@ -50,7 +50,9 @@ export default function AdminDashboard() {
     event.preventDefault(); setBusy(true); setNotice("");
     try {
       const result = await request("/admin/login", { method: "POST", body: JSON.stringify({ username, password }) });
-      setCsrf(result.csrfToken); await refresh(); setLoggedIn(true); setPassword(""); setNotice("Signed in. You can manage projects, project images, and submitted enquiries.");
+      setCsrf(result.csrfToken); setLoggedIn(true); setPassword("");
+      try { await refresh(); setNotice("Signed in. You can manage projects, project images, and submitted enquiries."); }
+      catch (dashboardError) { setNotice(`Signed in, but dashboard data could not load: ${dashboardError instanceof Error ? dashboardError.message : "Check the API database schema and server logs."}`); }
     } catch (error) { setNotice(error instanceof Error ? error.message : "Could not sign in."); }
     finally { setBusy(false); }
   }
@@ -130,7 +132,7 @@ export default function AdminDashboard() {
   return <main id="main-content" className="admin-page"><section className="admin-shell">
     <div className="admin-heading"><div><p className="eyebrow">OVC project desk</p><h1>Projects &amp; enquiries</h1><p>Manage project listings and photos, and review submitted customer enquiries.</p></div>{loggedIn && <button className="button button-outline-dark" onClick={logout} disabled={busy}>Sign out</button>}</div>
     {notice && <p className="admin-notice" role="status">{notice}</p>}
-    {!loggedIn ? <form className="admin-login" onSubmit={login}><div className="admin-login-mark">OVC <span>PROJECT DESK</span></div><h2>Sign in</h2><p>Sign in with the administrator account configured for the PHP API.</p><label>Username<input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label><button className="button button-gold" disabled={busy}>{busy ? "Please wait…" : "Sign in"}</button></form> : <div className="admin-workspace">
+    {!loggedIn ? <form className="admin-login" onSubmit={login}><div className="admin-login-mark">OVC <span>PROJECT DESK</span></div><h2>Sign in</h2><p>Sign in with an active administrator account stored in the OVC database.</p><label>Username<input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label><button className="button button-gold" disabled={busy}>{busy ? "Please wait…" : "Sign in"}</button></form> : <div className="admin-workspace">
       <nav className="admin-tab-bar admin-sidebar" role="tablist" aria-label="Project desk sections">
         <button role="tab" aria-selected={activeTab === "projects"} className={`admin-tab${activeTab === "projects" ? " is-active" : ""}`} onClick={() => setActiveTab("projects")}>Projects &amp; images<span className="admin-tab-count">{projectRecords.length}</span></button>
         <button role="tab" aria-selected={activeTab === "enquiries"} className={`admin-tab${activeTab === "enquiries" ? " is-active" : ""}`} onClick={() => setActiveTab("enquiries")}>Enquiries<span className="admin-tab-count">{enquiries.length}</span></button>

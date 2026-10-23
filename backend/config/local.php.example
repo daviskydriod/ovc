@@ -3,20 +3,17 @@
  * cPanel shared-hosting configuration template.
  * Copy to config/local.php and replace every placeholder. Never commit local.php.
  * Keep the backend root (and this file) outside the configured public document root.
- * Admin credentials are read from this private config; no application users table is used.
- * DB_USER below is the MySQL connection account, not a website user record.
+ * Administrator accounts are stored in the MySQL users table; this file contains only connection/runtime settings.
+ * DB_USER below is the MySQL connection account, separate from application users.
  */
 return [
     'DB_HOST' => 'localhost',
     'DB_NAME' => 'cpaneluser_ovc_site',
     'DB_USER' => 'cpaneluser_ovc_app',
     'DB_PASSWORD' => 'replace-with-a-long-random-database-password',
-    'ADMIN_USERNAME' => 'replace-with-a-unique-admin-username',
-    // Create with: php -r 'echo password_hash("replace-this-password", PASSWORD_DEFAULT), PHP_EOL;'
-    'ADMIN_PASSWORD_HASH' => 'replace-with-a-password-hash',
     // Create with: php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'
     'RATE_LIMIT_HMAC_KEY' => 'replace-with-at-least-64-random-hex-characters',
-    'CORS_ALLOWED_ORIGINS' => 'https://ovcconstructions.com,https://www.ovcconstructions.com',
+    'CORS_ALLOWED_ORIGINS' => 'https://ovc-lime.vercel.app,https://ovcconstructions.com,https://www.ovcconstructions.com',
     'SESSION_COOKIE_SECURE' => 'true',
     // Use None only when the frontend and API are cross-site, with Secure=true.
     'SESSION_SAMESITE' => 'Lax',

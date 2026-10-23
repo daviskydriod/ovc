@@ -1,7 +1,7 @@
 -- OVC Website: MySQL 8+ / compatible MariaDB single-import schema.
 -- Select the existing OVC database in cPanel/phpMyAdmin, back it up, then import this file once.
 -- This creates the complete current schema and conditionally upgrades the previous OVC schema.
--- No application `users` table is created or required. Administrator credentials stay in private PHP configuration.
+-- Administrator accounts are stored in the `users` table with password_hash() hashes; plaintext passwords are not stored.
 -- This file never creates or selects a database, and is safe to import again.
 
 -- Flexible page copy managed from the admin dashboard; consume values as plain text.
@@ -53,6 +53,22 @@ CREATE TABLE IF NOT EXISTS projects (
   CONSTRAINT fk_projects_cover_media FOREIGN KEY (cover_media_id) REFERENCES media (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+-- Administrator accounts authenticate from MySQL; store PHP password_hash() output only.
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  username VARCHAR(120) NOT NULL,
+  display_name VARCHAR(180) NOT NULL DEFAULT '',
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(32) NOT NULL DEFAULT 'admin',
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  last_login_at TIMESTAMP NULL DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_users_username (username),
+  KEY idx_users_role_active (role, is_active)
+) ENGINE=InnoDB;
+
 -- Contact submissions contain personal data. Apply a retention/deletion policy.
 -- IP addresses are not stored directly; ip_hash uses RATE_LIMIT_HMAC_KEY for abuse limits.
 CREATE TABLE IF NOT EXISTS contact_enquiries (
@@ -73,7 +89,7 @@ CREATE TABLE IF NOT EXISTS contact_enquiries (
   KEY idx_enquiries_ip_created (ip_hash, created_at)
 ) ENGINE=InnoDB;
 
--- Migration tracking; the completed database layout is version 3.
+-- Migration tracking; the completed database layout is version 5.
 CREATE TABLE IF NOT EXISTS schema_version (
   version INT UNSIGNED NOT NULL PRIMARY KEY,
   description VARCHAR(180) NOT NULL,
@@ -151,3 +167,5 @@ INSERT IGNORE INTO schema_version (version, description)
 VALUES (3, 'Complete OVC content, media, projects and enquiries schema; single-import installer');
 INSERT IGNORE INTO schema_version (version, description)
 VALUES (4, 'Projects support direct GitHub-hosted image URLs');
+INSERT IGNORE INTO schema_version (version, description)
+VALUES (5, 'Administrator authentication uses the MySQL users table');

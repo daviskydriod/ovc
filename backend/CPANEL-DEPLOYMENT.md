@@ -20,6 +20,8 @@ This guide accompanies `ovc-cpanel-api.zip`. It assumes an existing Next.js fron
 ├── .env.example           ← copy to .env; keep both outside public/
 ├── config/local.php.example
 ├── database/schema.sql     ← one complete database import
+├── database/admin-user-template.sql ← create the first administrator from a password hash
+├── database/projects-seed-drafts.sql ← optional 23 client-image drafts
 ├── database/project-import-template.sql ← add approved projects and GitHub image links
 ├── public/index.php       ← API subdomain document root
 ├── public/.htaccess
@@ -28,12 +30,12 @@ This guide accompanies `ovc-cpanel-api.zip`. It assumes an existing Next.js fron
 ```
 
 4. In File Manager, copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` (the same directory as `public/`, not inside it) and edit the copy with your private values. The PHP bootstrap loads this file automatically on shared hosting. The included root `.htaccess` also denies web requests for `.env` files as defense in depth; keep the API subdomain document root pointed to `public/` while the parent remains private. As an alternative, use `config/local.php.example` copied to `config/local.php`, also outside the web root. Real `.env` and `config/local.php` files are excluded from Git; never put real credentials in `public/` or commit them.
-5. Generate unique strong values for `DB_PASSWORD`, `ADMIN_USERNAME`, the admin password (store only its `password_hash` output), and `RATE_LIMIT_HMAC_KEY` (at least 32 random bytes). Set `CORS_ALLOWED_ORIGINS` to exact origins, e.g. `https://ovc-lime.vercel.app,https://ovcconstructions.com,https://www.ovcconstructions.com`; set `SESSION_COOKIE_SECURE=true`; use `SESSION_SAMESITE=Lax` for same-site requests. Set `PUBLIC_API_URL=https://api.ovcconstructions.com/api` and the cPanel-prefixed `DB_NAME` and `DB_USER`.
+5. Set a strong `DB_PASSWORD` and generate `RATE_LIMIT_HMAC_KEY` (at least 32 random bytes). Administrator credentials are no longer read from `.env`; they are stored in MySQL as password hashes. Set `CORS_ALLOWED_ORIGINS` to exact origins, e.g. `https://ovc-lime.vercel.app,https://ovcconstructions.com,https://www.ovcconstructions.com`; set `SESSION_COOKIE_SECURE=true`; use `SESSION_SAMESITE=Lax` for same-site requests. Set `PUBLIC_API_URL=https://api.ovcconstructions.com/api` and the cPanel-prefixed `DB_NAME` and `DB_USER`.
 6. Set `MEDIA_STORAGE_PATH` to a writable private absolute path outside the document root, e.g. `/home/ACCOUNT/private/ovc-media`. Create the directory and grant the PHP account write access. Keep the default upload cap and set PHP `upload_max_filesize`/`post_max_size` to at least that value.
 
 ## Import the database
 
-In cPanel → **phpMyAdmin**, back up your existing database, click its name, then choose **Import** and import `database/schema.sql`. This idempotent file creates the complete current OVC schema and adds `projects.cover_url` to an existing OVC database; safely re-import it after updating the API. It does not create/select a database or create a website `users` table. If your database has a custom, non-OVC schema, do not import blindly—compare its tables/columns first and adapt safely. For each project, edit `database/project-import-template.sql` with approved project details and a GitHub raw image URL, then import that completed SQL file separately.
+In cPanel → **phpMyAdmin**, back up your existing database, click the database named in `DB_NAME`, then choose **Import** and import `database/schema.sql`. This idempotent file creates the complete current OVC schema, creates an empty `users` table, and adds `projects.cover_url`; safely re-import it after updating the API. It does not create/select a database or any administrator account. If your database has a custom, non-OVC schema, do not import blindly—compare its tables/columns first and adapt safely. Next, replace `REPLACE_WITH_PASSWORD_HASH` in `database/admin-user-template.sql` with a PHP `password_hash()` value and import it to create the first admin. To create 23 unpublished project drafts using client-provided image URLs, import `database/projects-seed-drafts.sql`; replace the placeholder titles/descriptions and publish reviewed entries from `/admin`. Alternatively, import only approved rows from `database/project-import-template.sql`.
 
 ## Configure the frontend
 
@@ -48,8 +50,8 @@ Redeploy the frontend after setting variables. The PHP API allows public GET rou
 
 ## Verify staging before launch
 
-1. Open `https://api.ovcconstructions.com/api/health`. Expect HTTP 200 with `checks.php`, `checks.database`, `checks.schema` and `checks.ready` all true. A 503 means check PHP error logs, DB credentials and whether the one-time schema import completed.
-2. Open `/admin`, sign in with the configured account, and confirm page content, project records, uploads and enquiries load.
+1. Open `https://api.ovcconstructions.com/api/health`. Expect HTTP 200 with `checks.php`, `checks.database`, `checks.schema` and `checks.ready` all true. The schema check includes `projects.cover_url` and the `users` table. A 503 means check PHP error logs, DB credentials and whether the schema import completed against the same database named in `DB_NAME`.
+2. Open `/admin`, sign in using the username/password for the active `users` table row, and confirm project records, uploads and enquiries load.
 3. Create a project as a draft; verify it is not public. Publish it; verify it appears at `/projects`, its `/projects/{slug}` detail page renders, and its URL appears in `/sitemap.xml` after the five-minute revalidation window.
 4. Submit a real test enquiry in staging and verify it appears in the admin inbox. Then remove the test record and ensure test personal data is not retained.
 5. Upload a small approved image, attach it as a project cover, publish the media and project, verify the public cover stream, then unpublish or delete the test media.

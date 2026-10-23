@@ -56,8 +56,24 @@ function handle_health(): never {
         $pdo = db();
         $checks['database'] = (bool)$pdo->query('SELECT 1')->fetchColumn();
         $tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
-        $required = ['site_sections', 'media', 'projects', 'contact_enquiries'];
+        $required = ['site_sections', 'media', 'projects', 'contact_enquiries', 'users'];
         $checks['schema'] = count(array_diff($required, $tables)) === 0;
+        if ($checks['schema']) {
+            $requiredColumns = [
+                'site_sections' => ['section_key', 'content_json', 'updated_at'],
+                'media' => ['id', 'filename', 'original_name', 'media_type', 'title', 'alt_text', 'is_published', 'sort_order', 'created_at', 'updated_at'],
+                'projects' => ['id', 'slug', 'title', 'summary', 'description', 'category', 'cover_media_id', 'cover_url', 'status', 'sort_order', 'created_at', 'updated_at'],
+                'contact_enquiries' => ['id', 'full_name', 'phone', 'email', 'service', 'location', 'description', 'ip_hash', 'status', 'internal_note', 'created_at', 'updated_at'],
+                'users' => ['id', 'username', 'display_name', 'password_hash', 'role', 'is_active', 'last_login_at', 'created_at', 'updated_at'],
+            ];
+            $rows = $pdo->query('SELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE()')->fetchAll();
+            $present = [];
+            foreach ($rows as $row) $present[$row['TABLE_NAME']][$row['COLUMN_NAME']] = true;
+            foreach ($requiredColumns as $table => $columns) {
+                if (count(array_diff($columns, array_keys($present[$table] ?? []))) > 0) { $checks['schema'] = false; break; }
+            }
+        }
+        if (!$checks['schema']) $status = 503;
     } catch (Throwable $e) {
         error_log('OVC health check failed: ' . $e->getMessage());
         $status = 503;
@@ -100,22 +116,27 @@ function handle_contact(): never {
     json_response(['ok' => true, 'id' => (int)$pdo->lastInsertId(), 'message' => 'Enquiry received.'], 201);
 }
 
-/** Authenticate the single configured administrator; deliberately no users-table lookup or database query. */
+/** Authenticate an active MySQL administrator account; password_hash values are never returned. */
 function handle_login(): never {
     $body = request_json(4096);
-    $username = env_value('ADMIN_USERNAME');
-    $passwordHash = env_value('ADMIN_PASSWORD_HASH');
+    $username = trim((string)($body['username'] ?? ''));
+    $password = (string)($body['password'] ?? '');
     $attempts = (int)($_SESSION['login_attempts'] ?? 0);
     $attemptStart = (int)($_SESSION['login_attempt_started'] ?? time());
     if (time() - $attemptStart > 900) { $attempts = 0; $attemptStart = time(); }
     if ($attempts >= 8) json_response(['error' => 'Too many sign-in attempts. Wait 15 minutes and try again.'], 429);
-    if (!$username || !$passwordHash || !hash_equals($username, (string)($body['username'] ?? '')) || !password_verify((string)($body['password'] ?? ''), $passwordHash)) {
+    $stmt = db()->prepare("SELECT id, username, display_name, password_hash FROM users WHERE username = :username AND role = 'admin' AND is_active = 1 LIMIT 1");
+    $stmt->execute(['username' => $username]);
+    $user = $stmt->fetch();
+    $validPassword = $user && password_verify($password, $user['password_hash']);
+    if (!$user || !$validPassword) {
         $_SESSION['login_attempts'] = $attempts + 1; $_SESSION['login_attempt_started'] = $attemptStart; usleep(350000);
         json_response(['error' => 'Invalid username or password.'], 401);
     }
+    db()->prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = :id')->execute(['id' => $user['id']]);
     session_regenerate_id(true);
-    $_SESSION = ['admin_authenticated' => true, 'login_attempts' => 0, 'csrf_token' => bin2hex(random_bytes(32))];
-    json_response(['ok' => true, 'username' => $username, 'csrfToken' => $_SESSION['csrf_token'], 'expires' => 'browser-session']);
+    $_SESSION = ['admin_authenticated' => true, 'admin_user_id' => (int)$user['id'], 'admin_username' => $user['username'], 'admin_display_name' => $user['display_name'], 'login_attempts' => 0, 'csrf_token' => bin2hex(random_bytes(32))];
+    json_response(['ok' => true, 'username' => $user['username'], 'displayName' => $user['display_name'], 'csrfToken' => $_SESSION['csrf_token'], 'expires' => 'browser-session']);
 }
 
 function handle_content_save(): never {
@@ -348,7 +369,7 @@ function handle_project_delete(int $id): never {
 try {
     if ($path === '/health' && $method === 'GET') handle_health();
     if ($path === '/admin/login' && $method === 'POST') handle_login();
-    if ($path === '/admin/session' && $method === 'GET') { require_admin(); json_response(['authenticated' => true, 'username' => env_value('ADMIN_USERNAME'), 'csrfToken' => $_SESSION['csrf_token'] ?? null]); }
+    if ($path === '/admin/session' && $method === 'GET') { require_admin(); json_response(['authenticated' => true, 'username' => $_SESSION['admin_username'], 'displayName' => $_SESSION['admin_display_name'], 'csrfToken' => $_SESSION['csrf_token'] ?? null]); }
     if ($path === '/admin/csrf' && $method === 'GET') { require_admin(); if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); json_response(['csrfToken' => $_SESSION['csrf_token']]); }
     if ($path === '/admin/logout' && $method === 'POST') { require_admin(); require_csrf(); $_SESSION = []; if (ini_get('session.use_cookies')) { $params = session_get_cookie_params(); setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']); } session_destroy(); json_response(['ok' => true]); }
 

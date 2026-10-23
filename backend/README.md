@@ -17,7 +17,7 @@ For a panel-oriented walkthrough, use [`CPANEL-DEPLOYMENT.md`](CPANEL-DEPLOYMENT
 
 ### Single-file database import
 
-Use your existing MySQL database and its existing connection credentials; do not create a second database. Back up the database first. In phpMyAdmin, select the existing OVC database and import `database/schema.sql`. This idempotent file creates the complete current schema and adds missing columns, including `projects.cover_url`, to existing OVC databases. Re-import it after updating the API so older installations gain that column. It does not create or select a database, and it does not create or require an application `users` table. Use `database/project-import-template.sql` separately as a template when adding project rows with GitHub-hosted images.
+Use your existing MySQL database and its existing connection credentials; do not create a second database. Back up the database first. In phpMyAdmin, select the existing OVC database and import `database/schema.sql`. This idempotent file creates the complete current schema, adds missing columns such as `projects.cover_url`, and creates the `users` table without inserting an administrator account. Re-import it after updating the API. Then replace the hash placeholder and import `database/admin-user-template.sql` to create the first administrator. It does not create or select a database. To add all client images as unpublished project drafts, import `database/projects-seed-drafts.sql`; `database/project-import-template.sql` remains available for individual approved project rows.
 
 For command-line import, replace the placeholders with the exact cPanel-prefixed database and the MySQL account you already use for this application:
 
@@ -25,28 +25,26 @@ For command-line import, replace the placeholders with the exact cPanel-prefixed
 mysql -u YOUR_DB_USER -p --database=YOUR_EXISTING_DB < backend/database/schema.sql
 ```
 
-`DB_USER` and `DB_PASSWORD` are only the MySQL connection account PHP uses to access the existing database; they are not website user records. If the current database account lacks the `CREATE`/`ALTER` permissions needed for import, ask the database host to grant those permissions temporarily or use the account they provide for database imports. The running API needs only the table privileges listed by your host.
+`DB_USER` and `DB_PASSWORD` are the MySQL connection account PHP uses to access the existing database; that connection account is separate from administrator rows in the application's `users` table. If the current database account lacks the `CREATE`/`ALTER` permissions needed for import, use the account provided for database imports. The running API needs only the table privileges listed by your host.
 
 ### cPanel file upload
 
-Download the `ovc-cpanel-api.zip` artifact supplied with this change. In cPanel File Manager, upload and extract it into a private directory such as `/home/ACCOUNT/ovc-api/`, not directly into `public_html`. Set the `api.ovcconstructions.com` document root to `/home/ACCOUNT/ovc-api/public`; keep `src`, `database`, configuration and storage outside the web root. Copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` and edit the private file; the PHP bootstrap reads it automatically. Alternatively copy `config/local.php.example` to `config/local.php`. Back up the existing database, then import `database/schema.sql` exactly once. Ensure private media storage is writable by the PHP account. Finally test `https://api.ovcconstructions.com/api/health` and sign in to the admin dashboard from the deployed site.
+Download the `ovc-cpanel-api.zip` artifact supplied with this change. In cPanel File Manager, upload and extract it into a private directory such as `/home/ACCOUNT/ovc-api/`, not directly into `public_html`. Set the `api.ovcconstructions.com` document root to `/home/ACCOUNT/ovc-api/public`; keep `src`, `database`, configuration and storage outside the web root. Copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` and edit the private file; the PHP bootstrap reads it automatically. Alternatively copy `config/local.php.example` to `config/local.php`. Back up the existing database, then import `database/schema.sql`; optionally import `database/projects-seed-drafts.sql` to add 23 unpublished image-backed draft records. Ensure private media storage is writable by the PHP account. Finally test `https://api.ovcconstructions.com/api/health` and sign in to the admin dashboard from the deployed site.
 
 ### Environment configuration
 
 The shared-hosting loader reads `backend/.env`, located beside `public/` and outside the API document root. Copy `backend/.env.example` to `backend/.env` and edit the copy; the real `.env` is ignored by Git, and the included backend-root `.htaccess` denies web requests for `.env*`. The application also supports process variables and `config/local.php`. Precedence is process environment, then `config/local.php`, then `.env`. The simple parser accepts `KEY=value`, optional `export ` prefixes, comments, and single- or double-quoted values; it does not expand variables. Never commit real credentials.
 
-Administrator authentication is configuration-only: the API compares login attempts with the single `ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH` values and stores no administrator accounts in MySQL. There is no application `users` table, user-management endpoint, or roles system in this API. `DB_USER` is unrelated; it is the MySQL connection account, not a website user table.
+Administrator authentication uses active rows in MySQL's `users` table with `role='admin'`. Passwords are stored only as PHP `password_hash()` output and checked with `password_verify()`; plaintext passwords are never stored or returned. The API does not expose a user-management screen or user CRUD endpoint: provision or disable administrator rows through phpMyAdmin. Protected requests re-check that the session's account still exists and is active. `DB_USER` is the separate MySQL connection account, not an administrator login.
 
 | Variable | Required | Purpose |
 |---|---|---|
 | `DB_HOST` | Yes | MySQL host or socket host; default `127.0.0.1`. |
 | `DB_NAME` | Yes | Exact database name created/selected in cPanel or MySQL, including any hosting-account prefix. |
-| `DB_USER` | Yes | MySQL account PHP uses to connect to the existing database; not an application users table. |
+| `DB_USER` | Yes | MySQL connection account PHP uses to access the existing database; distinct from application administrator accounts. |
 | `DB_PASSWORD` | Yes | Password for that MySQL connection account. |
-| `ADMIN_USERNAME` | Yes | Single administrator username. |
-| `ADMIN_PASSWORD_HASH` | Yes | Password hash generated with `php -r 'echo password_hash("a-long-unique-password", PASSWORD_DEFAULT), PHP_EOL;'`. Never store the plaintext password here. |
 | `RATE_LIMIT_HMAC_KEY` | Yes | At least 32 random bytes used to hash IP addresses for abuse throttling. Generate with `php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'`. |
-| `CORS_ALLOWED_ORIGINS` | For cross-origin use | Exact comma-separated origins, e.g. `https://ovcconstructions.com,https://www.ovcconstructions.com`; never use `*` with credentials. |
+| `CORS_ALLOWED_ORIGINS` | For cross-origin use | Exact comma-separated origins, e.g. `https://ovc-lime.vercel.app,https://ovcconstructions.com,https://www.ovcconstructions.com`; never use `*` with credentials. |
 | `SESSION_COOKIE_SECURE` | Production | Set to `true` for HTTPS. |
 | `SESSION_SAMESITE` | Usually | `Strict` by default. Cross-site deployments may require `None` plus `SESSION_COOKIE_SECURE=true`; browser third-party-cookie policies can still block the cookie. Prefer same-site deployment. |
 | `API_BASE_PATH` | Optional | URL prefix stripped by the router; default `/api`. Set `/` only when the API is mounted at the origin root. |
@@ -68,7 +66,7 @@ The `/admin/*` routes require the HttpOnly `ovc_admin` session cookie. State-cha
 
 #### `GET /api/health`
 
-Checks that PHP runs, MySQL can be reached, and all required `site_sections`, `media`, `projects` and `contact_enquiries` tables exist. No credentials are returned. A healthy response is `200`; a dependency/configuration failure returns `503`.
+Checks that PHP runs, MySQL can be reached, all required `site_sections`, `media`, `projects`, `contact_enquiries` and `users` tables exist, and required columns (including `projects.cover_url` and administrator-account fields) are present. No credentials are returned. A healthy response is `200`; a dependency or incomplete-schema failure returns `503`.
 
 ```json
 {
@@ -79,7 +77,7 @@ Checks that PHP runs, MySQL can be reached, and all required `site_sections`, `m
 }
 ```
 
-Use this as an operational readiness check, not as a detailed diagnostic endpoint. The exact database error is only written to the PHP server log.
+Use this as an operational readiness check, not as a detailed diagnostic endpoint. The exact database error is only written to the PHP server log; an incomplete schema can be fixed by importing the current `database/schema.sql` into the same database selected by `DB_NAME`.
 
 ### Public content
 
@@ -230,7 +228,7 @@ Requires admin session and CSRF header. Permanently removes a submission and its
 
 ## 4. Database organization and data handling
 
-The schema separates four functional domains:
+The schema separates five functional domains:
 
 | Table | Purpose | Important design |
 |---|---|---|
@@ -238,14 +236,15 @@ The schema separates four functional domains:
 | `media` | File metadata and publication state | Files are stored outside web root; unique random filename; MIME, type, alt text and sort order indexed for public reads. |
 | `projects` | API-managed project portfolio records | Unique slug, draft/published status, sort order, optional uploaded-media FK or direct GitHub `cover_url`. |
 | `contact_enquiries` | Public project requests | Personal contact details, status and private staff note; raw IP is not stored; status/time and HMAC hash/time indexes support inbox and rate limiting. |
-| `schema_version` | Applied database version | Version 4 records GitHub project cover URL support. |
+| `users` | Administrator accounts | Unique usernames; password hashes only; active flag, admin role and last-login timestamp. No initial account is inserted by the schema. |
+| `schema_version` | Applied database version | Version 5 records MySQL-backed administrator authentication. |
 
 All tables use InnoDB and `utf8mb4`. Prepared statements are used for data values. The app account should have only SELECT/INSERT/UPDATE/DELETE access to the selected database (no schema administration at runtime). Enquiry contact details are personal data: limit access, define a retention period, delete records when no longer required, and restrict database backups. `internal_note` is admin-only.
 
 ## 5. Security and operations checklist
 
 - Serve the API over HTTPS; set secure cookies and exact CORS origin allowlists. Do not use wildcard origins with credentials.
-- Keep database and admin credentials in the host secret manager; use unique strong values. Rotate them if exposed.
+- Keep database connection credentials private and use a strong unique administrator password; the database stores only its password hash. Rotate credentials if exposed.
 - Set media storage outside the document root with restrictive directory permissions. Maintain backups and test restores.
 - Configure host/WAF rate limiting for login and public contact routes; the API's own throttles are additional controls, not a substitute.
 - Monitor PHP error logs. API responses intentionally avoid returning SQL details.
@@ -255,4 +254,4 @@ All tables use InnoDB and `utf8mb4`. Prepared statements are used for data value
 
 ## 6. Compatibility and limitations
 
-The single administrator account is configured with private settings; there is no multi-user roles interface. The public Projects pages use published API/database records only. Project covers can be uploaded to private media storage and selected in the dashboard, or linked from GitHub through SQL/API. Deleting a project removes its unique uploaded cover file when no other project uses it; GitHub files are not deleted by the cPanel API. The public enquiry endpoint stores messages in MySQL but does not send email; the protected admin inbox is the delivery mechanism. Hosting, DNS, database credentials and deployment are configured by the site owner and are not included in source control.
+Administrator accounts are stored in the MySQL `users` table; this dashboard does not include a user-management screen, so add or disable admins through phpMyAdmin. The public Projects pages use published API/database records only. Project covers can be uploaded to private media storage and selected in the dashboard, or linked from GitHub through SQL/API. Deleting a project removes its unique uploaded cover file when no other project uses it; GitHub files are not deleted by the cPanel API. The public enquiry endpoint stores messages in MySQL but does not send email; the protected admin inbox is the delivery mechanism. Hosting, DNS, database credentials and deployment are configured by the site owner and are not included in source control.

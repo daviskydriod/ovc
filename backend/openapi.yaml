@@ -4,8 +4,8 @@ info:
   version: 1.0.0
   description: >-
     PHP 8.1 and MySQL API for public site content, portfolio projects, media,
-    project enquiries and session-authenticated administration. Administrator
-    credentials are configured privately; no application users table is used.
+    project enquiries and session-authenticated administration. Active administrator
+    accounts are stored in MySQL with PHP password_hash() values.
     Production base URL is configured by the hosting owner; the default path
     prefix is /api.
 servers:
@@ -30,7 +30,7 @@ paths:
       summary: Check service and database readiness
       responses:
         '200':
-          description: All required application tables are available.
+          description: All required application tables and columns are available.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Health'}
@@ -168,8 +168,8 @@ paths:
   /admin/login:
     post:
       tags: [Admin authentication]
-      summary: Authenticate the configured administrator
-      description: "Compares against the single ADMIN_USERNAME and ADMIN_PASSWORD_HASH configuration values; no users-table query is performed. Sets the HttpOnly ovc_admin session cookie and returns the CSRF token. Use credentials: include on cross-origin browser requests."
+      summary: Authenticate an active MySQL administrator account
+      description: "Looks up an active users-table row with role admin and verifies its password_hash with PHP password_verify(). Sets the HttpOnly ovc_admin session cookie and returns the CSRF token. Use credentials: include on cross-origin browser requests."
       requestBody:
         required: true
         content:
@@ -192,6 +192,7 @@ paths:
                 properties:
                   ok: {type: boolean}
                   username: {type: string}
+                  displayName: {type: string}
                   csrfToken: {type: string}
                   expires: {type: string}
         '401': {description: Credentials are invalid.}
@@ -211,6 +212,7 @@ paths:
                 properties:
                   authenticated: {type: boolean}
                   username: {type: string}
+                  displayName: {type: string}
                   csrfToken: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
   /admin/csrf:
