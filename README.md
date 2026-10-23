@@ -30,7 +30,7 @@ The route declaration is in [`public/manus-routes.json`](public/manus-routes.jso
 
 ## Contact enquiries
 
-The contact form validates submissions in the browser and again in the PHP API, then stores accepted requests in MySQL. Authenticated staff review and update requests in the `/admin` Enquiries tab. Visitors can call or open WhatsApp for each supplied phone number; WhatsApp chats depend on the corresponding number having an active WhatsApp account. The frontend reads `NEXT_PUBLIC_CMS_API_URL` for admin, contact, page content and project requests; the root `.env.example` uses `https://api.ovcconstructions.com/api`. Configure the same value in the frontend host's build settings. Follow [`backend/README.md`](backend/README.md) before launch.
+The contact form validates submissions in the browser and again in the PHP API, then stores accepted requests in MySQL. Authenticated staff review and update requests in the `/admin` Enquiries tab. Visitors can call or open WhatsApp for each supplied phone number; WhatsApp chats depend on the corresponding number having an active WhatsApp account. The frontend reads `NEXT_PUBLIC_CMS_API_URL` for admin, contact, page content and project requests; the root `.env.example` uses the confirmed URL `https://ovcconstructions.com/api`. Configure the same value in the frontend host's build settings. Follow [`backend/README.md`](backend/README.md) before launch.
 
 ## Images and company claims
 
@@ -42,7 +42,7 @@ The full endpoint guide is [`backend/README.md`](backend/README.md); machine-rea
 
 The `/admin` dashboard provides Home, About, Services, Projects & Images, Project Records, Contact, Enquiries and Uploads tabs. Project Records supports create, read, update and delete, draft/published status, ordering and a selected uploaded cover image. Published projects appear in the public portfolio and project detail routes. New backend images can be managed and marked public/private.
 
-For cPanel, configure the API subdomain document root to `backend/public/`, keep `src/`, `database/` and media storage outside that public root, back up the existing database and import `backend/database/schema.sql` once. Copy `backend/.env.example` to `backend/.env` beside `public/` and enter the private MySQL credentials and single admin username/password hash there; the PHP bootstrap loads it automatically, and the backend-root `.htaccess` denies web requests for `.env*`. Set `NEXT_PUBLIC_CMS_API_URL=https://<your-api-host>/api` in the Next.js host's build settings and allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. Never commit real passwords or `.env` files.
+For cPanel, route `https://ovcconstructions.com/api/*` to the PHP backend's `public/` directory while keeping `src/`, `database/`, configuration and media storage private; back up the existing database and import `backend/database/schema.sql` once. Copy `backend/.env.example` to `backend/.env` beside `public/` and enter the private MySQL credentials and single admin username/password hash there; the PHP bootstrap loads it automatically, and the backend-root `.htaccess` denies web requests for `.env*`. Set `NEXT_PUBLIC_CMS_API_URL=https://ovcconstructions.com/api` in the Next.js host's build settings and allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. The environment value does not itself route `/api` to cPanel; configure that path on the hosting/reverse-proxy layer. Never commit real passwords or `.env` files.
 
 ## Production domain and hosting
 

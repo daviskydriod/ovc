@@ -9,8 +9,8 @@ info:
     Production base URL is configured by the hosting owner; the default path
     prefix is /api.
 servers:
-  - url: https://api.example.com/api
-    description: Replace with the API host configured in cPanel.
+  - url: https://ovcconstructions.com/api
+    description: OVC PHP API mounted at /api on the primary domain.
 tags:
   - name: System
   - name: Content

@@ -11,7 +11,7 @@ For a panel-oriented walkthrough, use [`CPANEL-DEPLOYMENT.md`](CPANEL-DEPLOYMENT
 - PHP 8.1 or later with `pdo_mysql`, `fileinfo` and PHP sessions. `mbstring` is recommended but the API includes UTF-8 helper fallbacks.
 - MySQL 8+ or a compatible MariaDB version with InnoDB and JSON support.
 - HTTPS for the public website and API.
-- Configure the PHP document root to `backend/public/`; never expose `backend/src`, database scripts, `.env` files or media storage as static web content. The backend-root `.htaccess` denies requests for `.env*` files as defense in depth.
+- Route `https://ovcconstructions.com/api/*` to the PHP `public/` directory, preserving the `/api` prefix for the router. Keep `src`, database scripts, `.env` files and media storage outside the web document root. The backend-root `.htaccess` denies requests for `.env*` files as defense in depth.
 - Apache can use the included `public/.htaccess`. For Nginx, route missing paths to `index.php` and preserve the query string.
 - Set PHP `upload_max_filesize` and `post_max_size` to values at least as large as `MAX_UPLOAD_BYTES`; use host/WAF request limits too.
 
@@ -29,7 +29,7 @@ mysql -u YOUR_DB_USER -p --database=YOUR_EXISTING_DB < backend/database/schema.s
 
 ### cPanel file upload
 
-Download the `ovc-cpanel-api.zip` artifact supplied with this change. In cPanel File Manager, upload and extract it into a private directory such as `/home/ACCOUNT/ovc-api/`, not directly into `public_html`. Configure an API subdomain (recommended: `api.ovcconstructions.com`) with document root `/home/ACCOUNT/ovc-api/public`; the `src`, `database`, configuration and storage folders are siblings outside the public document root. If the hosting plan cannot set that document root, ask the host to map the subdomain to the `public` directory—do not make `src` or `database` publicly accessible. Copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` and edit the private file; the PHP bootstrap reads it automatically. Alternatively copy `config/local.php.example` to `config/local.php`. Back up the existing database, then import `database/schema.sql` exactly once. Ensure private media storage is writable by the PHP account. Finally test `https://api.example.com/api/health` and sign in to the admin dashboard from the deployed site.
+Download the `ovc-cpanel-api.zip` artifact supplied with this change. In cPanel File Manager, upload and extract it into a private directory such as `/home/ACCOUNT/ovc-api/`, not directly into `public_html`. The configured public API base is `https://ovcconstructions.com/api`; the hosting arrangement must route requests under `/api/*` on the primary domain to this backend's `public/` directory while keeping `src`, `database`, configuration and storage outside the web root. Preserve the `/api` prefix. If the domain's frontend host currently handles all paths, configure its routing/reverse proxy so `/api/*` reaches the PHP API; the `.env` setting alone does not create that route. Copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` and edit the private file; the PHP bootstrap reads it automatically. Alternatively copy `config/local.php.example` to `config/local.php`. Back up the existing database, then import `database/schema.sql` exactly once. Ensure private media storage is writable by the PHP account. Finally test `https://ovcconstructions.com/api/health` and sign in to the admin dashboard from the deployed site.
 
 ### Environment configuration
 
@@ -50,11 +50,11 @@ Administrator authentication is configuration-only: the API compares login attem
 | `SESSION_COOKIE_SECURE` | Production | Set to `true` for HTTPS. |
 | `SESSION_SAMESITE` | Usually | `Strict` by default. Cross-site deployments may require `None` plus `SESSION_COOKIE_SECURE=true`; browser third-party-cookie policies can still block the cookie. Prefer same-site deployment. |
 | `API_BASE_PATH` | Optional | URL prefix stripped by the router; default `/api`. Set `/` only when the API is mounted at the origin root. |
-| `PUBLIC_API_URL` | For media links | Public API base URL ending in the configured API prefix, e.g. `https://api.example.com/api`. |
+| `PUBLIC_API_URL` | For media links | Public API base URL ending in the configured API prefix; for OVC use `https://ovcconstructions.com/api`. |
 | `MEDIA_STORAGE_PATH` | Optional | Absolute writable private directory; default `backend/storage/media`. Keep it outside the document root and back it up. |
 | `MAX_UPLOAD_BYTES` | Optional | Per-file byte limit; default `104857600` (100 MiB). |
 
-In Vercel configure `NEXT_PUBLIC_CMS_API_URL` as the API base URL including `/api`. Allow that exact frontend origin in `CORS_ALLOWED_ORIGINS`. For cross-origin admin fetches the browser must use `credentials: "include"`; the site already does this. After changing secrets, restart PHP workers and verify `GET /api/health`.
+In the Next.js host configure `NEXT_PUBLIC_CMS_API_URL=https://ovcconstructions.com/api`. Allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. For cross-origin admin fetches the browser must use `credentials: "include"`; the site already does this. After changing secrets, restart PHP workers and verify `GET https://ovcconstructions.com/api/health`.
 
 ## 2. Endpoint conventions
 

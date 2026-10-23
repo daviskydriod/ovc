@@ -5,7 +5,7 @@ import { FormEvent, useCallback, useState } from "react";
 import { cmsSections } from "@/data/cms-sections";
 import { projectImages } from "@/data/project-images";
 
-const API = (process.env.NEXT_PUBLIC_CMS_API_URL || "").replace(/\/$/, "");
+const API = (process.env.NEXT_PUBLIC_CMS_API_URL || "https://ovcconstructions.com/api").replace(/\/$/, "");
 type MediaItem = { id: number; filename: string; original_name: string; media_type: "image" | "video"; title: string; alt_text: string; is_published: boolean; url?: string };
 type Enquiry = { id: number; full_name: string; phone: string; email: string; service: string; location: string; description: string; status: "new" | "contacted" | "closed"; internal_note?: string; created_at: string };
 type ProjectRecord = { id: number; slug: string; title: string; summary: string; description: string; category: string; cover_media_id: number | null; cover_url: string | null; status: "draft" | "published"; sort_order: number };

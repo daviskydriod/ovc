@@ -21,7 +21,7 @@ return [
     // Use None only when the frontend and API are cross-site, with Secure=true.
     'SESSION_SAMESITE' => 'Lax',
     'API_BASE_PATH' => '/api',
-    'PUBLIC_API_URL' => 'https://api.ovcconstructions.com/api',
+    'PUBLIC_API_URL' => 'https://ovcconstructions.com/api',
     'MEDIA_STORAGE_PATH' => '/home/cpaneluser/private/ovc-media',
     'MAX_UPLOAD_BYTES' => '104857600',
 ];
