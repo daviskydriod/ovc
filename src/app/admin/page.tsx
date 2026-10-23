@@ -151,10 +151,28 @@ export default function AdminDashboard() {
   const selectedImages = Array.isArray(values.projects?.images) ? values.projects.images as string[] : projectImages.map((image) => image.src);
   const tabLabel = (tab: Tab) => tab === "projects" ? "Projects & images" : tab === "projectRecords" ? "Project records" : tab === "media" ? "Uploads" : tab === "enquiries" ? "Enquiries" : cmsSections[tab].label;
 
-  return <main id="main-content" className="admin-page"><section className="admin-shell">
-    <div className="admin-heading"><div><p className="eyebrow">OVC website management</p><h1>Content studio</h1><p>Edit website sections, create project records, manage uploads and follow up on enquiries.</p></div>{loggedIn && <button className="button button-outline-dark" onClick={logout} disabled={busy}>Sign out</button>}</div>
-    {notice && <p className="admin-notice" role="status">{notice}</p>}
-    {!loggedIn ? <form className="admin-login" onSubmit={login}><div className="admin-login-mark">OVC <span>CONTENT STUDIO</span></div><h2>Administrator sign in</h2><p>Sign in with the admin account configured on your PHP hosting.</p><label>Username<input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label><button className="button button-gold" disabled={busy}>{busy ? "Please wait…" : "Sign in"}</button></form> : <div className="admin-workspace">
+  return <main id="main-content" className={`admin-page${loggedIn ? " admin-page-authenticated" : " admin-page-unauthenticated"}`}><section className="admin-shell">
+    {loggedIn && <div className="admin-heading"><div><p className="eyebrow">OVC website management</p><h1>Content studio</h1><p>Edit website sections, create project records, manage uploads and follow up on enquiries.</p></div><button className="button button-outline-dark" onClick={logout} disabled={busy}>Sign out</button></div>}
+    {loggedIn && notice && <p className="admin-notice" role="status">{notice}</p>}
+    {!loggedIn ? <form className="admin-login admin-login-split" onSubmit={login}>
+      <div className="admin-login-photo">
+        <Image src="/projects/client-building-construction-photo.webp" alt="Client-provided construction photograph" fill priority sizes="(max-width: 680px) 100vw, 52vw" />
+        <div className="admin-login-photo-overlay">
+          <Image src="/brand/ovc-reverse-white-transparent.png" alt="Okechukwu Venatius Chibuike Ltd." width={369} height={220} className="admin-login-photo-logo" />
+          <div className="admin-login-photo-copy"><p className="eyebrow">OVC CONTENT STUDIO</p><h1>Manage your digital presence.</h1><p>One secure workspace for your website content, projects, media and customer enquiries.</p></div>
+          <p className="admin-login-photo-caption">Client-provided construction photograph</p>
+        </div>
+      </div>
+      <div className="admin-login-panel">
+        <Image src="/brand/ovc-primary-transparent.png" alt="OVC" width={636} height={266} className="admin-login-brand" />
+        <p className="eyebrow">ADMINISTRATOR PORTAL</p><h2>Welcome back</h2><p>Sign in with the admin account configured on your PHP hosting.</p>
+        {notice && <p className="admin-login-notice" role="alert">{notice}</p>}
+        <label>Username<input name="username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required /></label>
+        <label>Password<input name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+        <button className="button button-gold" disabled={busy}>{busy ? "Please wait…" : "Sign in"}</button>
+        <p className="admin-login-footnote">Secure access for authorized OVC administrators.</p>
+      </div>
+    </form> : <div className="admin-workspace">
       <nav className="admin-tab-bar" role="tablist" aria-label="Content sections">{tabs.map((tab) => <button key={tab} role="tab" aria-selected={activeTab === tab} className={`admin-tab${activeTab === tab ? " is-active" : ""}`} onClick={() => setActiveTab(tab)}>{tabLabel(tab)}{tab === "projects" && <span className="admin-tab-count">{projectImages.length}</span>}{tab === "projectRecords" && <span className="admin-tab-count">{projectRecords.length}</span>}{tab === "enquiries" && <span className="admin-tab-count">{enquiries.length}</span>}</button>)}</nav>
       {currentSection ? <div className="admin-editor-layout"><section className="admin-panel admin-editor-panel" role="tabpanel"><div className="admin-panel-heading"><div><p className="eyebrow">{currentSection.eyebrow}</p><h2>{currentSection.label}</h2><p>Changes are stored in your MySQL content database.</p></div><button className="button button-navy" onClick={saveSection} disabled={busy}>{busy ? "Saving…" : "Save changes"}</button></div>
         <div className="admin-form-fields">{currentSection.fields.map((field) => <label className="admin-field" key={field.key}><span>{field.label}</span>{field.multiline ? <textarea rows={4} maxLength={1500} value={typeof currentValues[field.key] === "string" ? currentValues[field.key] as string : ""} onChange={(event) => editField(field.key, event.target.value)} /> : <input maxLength={300} value={typeof currentValues[field.key] === "string" ? currentValues[field.key] as string : ""} onChange={(event) => editField(field.key, event.target.value)} />}<small>{field.help}</small></label>)}</div>
