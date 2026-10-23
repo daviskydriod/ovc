@@ -11,13 +11,13 @@ For a panel-oriented walkthrough, use [`CPANEL-DEPLOYMENT.md`](CPANEL-DEPLOYMENT
 - PHP 8.1 or later with `pdo_mysql`, `fileinfo` and PHP sessions. `mbstring` is recommended but the API includes UTF-8 helper fallbacks.
 - MySQL 8+ or a compatible MariaDB version with InnoDB and JSON support.
 - HTTPS for the public website and API.
-- Route `https://ovcconstructions.com/api/*` to the PHP `public/` directory, preserving the `/api` prefix for the router. Keep `src`, database scripts, `.env` files and media storage outside the web document root. The backend-root `.htaccess` denies requests for `.env*` files as defense in depth.
+- Configure `https://api.ovcconstructions.com` to serve the PHP `public/` directory; the API base is `https://api.ovcconstructions.com/api`. Keep `src`, database scripts, `.env` files and media storage outside the web document root. The backend-root `.htaccess` denies requests for `.env*` files as defense in depth.
 - Apache can use the included `public/.htaccess`. For Nginx, route missing paths to `index.php` and preserve the query string.
 - Set PHP `upload_max_filesize` and `post_max_size` to values at least as large as `MAX_UPLOAD_BYTES`; use host/WAF request limits too.
 
 ### Single-file database import
 
-Use your existing MySQL database and its existing connection credentials; do not create a second database. Back up the database first. In phpMyAdmin, select the existing OVC database and import `database/schema.sql` once. The file creates the complete current schema and conditionally adds the missing columns and indexes from the earlier OVC schema, so there is one import for both a fresh database and the previous OVC installation. It does not create or select a database, and it does not create or require an application `users` table. Do not run separate migration files.
+Use your existing MySQL database and its existing connection credentials; do not create a second database. Back up the database first. In phpMyAdmin, select the existing OVC database and import `database/schema.sql`. This idempotent file creates the complete current schema and adds missing columns, including `projects.cover_url`, to existing OVC databases. Re-import it after updating the API so older installations gain that column. It does not create or select a database, and it does not create or require an application `users` table. Use `database/project-import-template.sql` separately as a template when adding project rows with GitHub-hosted images.
 
 For command-line import, replace the placeholders with the exact cPanel-prefixed database and the MySQL account you already use for this application:
 
@@ -29,7 +29,7 @@ mysql -u YOUR_DB_USER -p --database=YOUR_EXISTING_DB < backend/database/schema.s
 
 ### cPanel file upload
 
-Download the `ovc-cpanel-api.zip` artifact supplied with this change. In cPanel File Manager, upload and extract it into a private directory such as `/home/ACCOUNT/ovc-api/`, not directly into `public_html`. The configured public API base is `https://ovcconstructions.com/api`; the hosting arrangement must route requests under `/api/*` on the primary domain to this backend's `public/` directory while keeping `src`, `database`, configuration and storage outside the web root. Preserve the `/api` prefix. If the domain's frontend host currently handles all paths, configure its routing/reverse proxy so `/api/*` reaches the PHP API; the `.env` setting alone does not create that route. Copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` and edit the private file; the PHP bootstrap reads it automatically. Alternatively copy `config/local.php.example` to `config/local.php`. Back up the existing database, then import `database/schema.sql` exactly once. Ensure private media storage is writable by the PHP account. Finally test `https://ovcconstructions.com/api/health` and sign in to the admin dashboard from the deployed site.
+Download the `ovc-cpanel-api.zip` artifact supplied with this change. In cPanel File Manager, upload and extract it into a private directory such as `/home/ACCOUNT/ovc-api/`, not directly into `public_html`. Set the `api.ovcconstructions.com` document root to `/home/ACCOUNT/ovc-api/public`; keep `src`, `database`, configuration and storage outside the web root. Copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` and edit the private file; the PHP bootstrap reads it automatically. Alternatively copy `config/local.php.example` to `config/local.php`. Back up the existing database, then import `database/schema.sql` exactly once. Ensure private media storage is writable by the PHP account. Finally test `https://api.ovcconstructions.com/api/health` and sign in to the admin dashboard from the deployed site.
 
 ### Environment configuration
 
@@ -50,11 +50,11 @@ Administrator authentication is configuration-only: the API compares login attem
 | `SESSION_COOKIE_SECURE` | Production | Set to `true` for HTTPS. |
 | `SESSION_SAMESITE` | Usually | `Strict` by default. Cross-site deployments may require `None` plus `SESSION_COOKIE_SECURE=true`; browser third-party-cookie policies can still block the cookie. Prefer same-site deployment. |
 | `API_BASE_PATH` | Optional | URL prefix stripped by the router; default `/api`. Set `/` only when the API is mounted at the origin root. |
-| `PUBLIC_API_URL` | For media links | Public API base URL ending in the configured API prefix; for OVC use `https://ovcconstructions.com/api`. |
+| `PUBLIC_API_URL` | For media links | Public API base URL ending in the configured API prefix; for OVC use `https://api.ovcconstructions.com/api`. |
 | `MEDIA_STORAGE_PATH` | Optional | Absolute writable private directory; default `backend/storage/media`. Keep it outside the document root and back it up. |
 | `MAX_UPLOAD_BYTES` | Optional | Per-file byte limit; default `104857600` (100 MiB). |
 
-In the Next.js host configure `NEXT_PUBLIC_CMS_API_URL=https://ovcconstructions.com/api`. Allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. For cross-origin admin fetches the browser must use `credentials: "include"`; the site already does this. After changing secrets, restart PHP workers and verify `GET https://ovcconstructions.com/api/health`.
+In the Next.js host configure `NEXT_PUBLIC_CMS_API_URL=https://api.ovcconstructions.com/api`. Allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. For cross-origin admin fetches the browser must use `credentials: "include"`; the site already does this. After changing secrets, restart PHP workers and verify `GET https://api.ovcconstructions.com/api/health`.
 
 ## 2. Endpoint conventions
 
@@ -93,11 +93,11 @@ Returns a single saved section as `{ "key": "home", "content": { ... }, "updated
 
 ### Projects and portfolio records
 
-Projects are separate database records, not just captions attached to the static client gallery. Administrators can create drafts or published entries and optionally attach a cover image already uploaded to the media library. Public endpoints expose only published projects. The Next.js portfolio is pre-rendered and revalidates every five minutes; new slugs are generated on the first request after publication and included in the sitemap on its next revalidation.
+The public Projects page is API/database driven and does not include the former static image gallery. Public endpoints expose only published database records. A project can use `cover_url` for a direct HTTPS image from GitHub's raw image hosts; legacy records may still reference a media-library item. The dashboard does not upload or edit project images; use the provided SQL template for GitHub image URLs. The Next.js portfolio is pre-rendered and revalidates every five minutes; new slugs are generated on the first request after publication and included in the sitemap on its next revalidation.
 
 #### `GET /api/projects?limit=25&offset=0`
 
-Lists published records with `id`, `slug`, `title`, `summary`, `description`, `category`, optional `cover_url`, optional `cover_alt_text`, and timestamps. Returns `{ "projects": [...], "pagination": { "limit": 25, "offset": 0, "total": 2, "hasMore": false } }`.
+Lists published records with `id`, `slug`, `title`, `summary`, `description`, `category`, optional GitHub `cover_url`, optional `cover_alt_text`, and timestamps. Returns `{ "projects": [...], "pagination": { "limit": 25, "offset": 0, "total": 2, "hasMore": false } }`.
 
 #### `GET /api/projects/{slug}`
 
@@ -113,7 +113,7 @@ Requires an admin session. Reads one record by numeric id, including drafts. Ret
 
 #### `POST /api/admin/projects`
 
-Requires an admin session and CSRF header. JSON requires `slug`, `title` and `description`; optional fields are `summary`, `category`, `cover_media_id`, `status` and `sort_order`. Slugs are lowercase URL-safe strings with hyphens; title is limited to 180 characters, summary 500, description 12,000 and category 120. A cover id must point to an image media record. New projects default to `draft`, order `0`, and no cover. Response 201 contains `{ "ok": true, "id": 42, "slug": "sample-project" }`. Duplicate slugs return 409; invalid data returns 422.
+Requires an admin session and CSRF header. JSON requires `slug`, `title` and `description`; optional fields are `summary`, `category`, `cover_url`, legacy `cover_media_id`, `status` and `sort_order`. `cover_url`, when provided through the API, must be HTTPS and hosted at `raw.githubusercontent.com`, `user-images.githubusercontent.com` or `gist.githubusercontent.com`. The database template uses direct raw GitHub links. New projects default to `draft`, order `0`, and no cover. Response 201 contains `{ "ok": true, "id": 42, "slug": "sample-project" }`. Duplicate slugs return 409; invalid data returns 422.
 
 ```json
 {
@@ -122,7 +122,7 @@ Requires an admin session and CSRF header. JSON requires `slug`, `title` and `de
   "summary": "A short approved project summary.",
   "description": "Approved project description and scope details.",
   "category": "Construction",
-  "cover_media_id": 17,
+  "cover_url": "https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-building-construction-photo.webp",
   "status": "draft",
   "sort_order": 0
 }
@@ -130,7 +130,7 @@ Requires an admin session and CSRF header. JSON requires `slug`, `title` and `de
 
 #### `PATCH /api/admin/projects/{id}`
 
-Requires an admin session and CSRF header. Send one or more of the `POST` fields to update only those properties. A duplicate slug returns 409, invalid fields 422 and absent id 404. To remove a cover image, set `cover_media_id` to `null`.
+Requires an admin session and CSRF header. Send one or more of the `POST` fields to update only those properties. A duplicate slug returns 409, invalid fields 422 and absent id 404. To remove a cover URL, set `cover_url` to `null`.
 
 #### `DELETE /api/admin/projects/{id}`
 

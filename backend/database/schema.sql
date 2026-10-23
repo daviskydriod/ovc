@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS media (
   KEY idx_media_type_created (media_type, created_at)
 ) ENGINE=InnoDB;
 
--- Project records can reference a published image/video library item as their cover.
+-- Project records can use a legacy media item or a direct approved GitHub image URL as cover.
 CREATE TABLE IF NOT EXISTS projects (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   slug VARCHAR(120) NOT NULL,
@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS projects (
   description TEXT NOT NULL,
   category VARCHAR(120) NOT NULL DEFAULT '',
   cover_media_id BIGINT UNSIGNED NULL,
+  cover_url VARCHAR(2048) NULL,
   status ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
   sort_order INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -139,5 +140,14 @@ SET @ovc_ddl = IF(
 );
 PREPARE ovc_stmt FROM @ovc_ddl; EXECUTE ovc_stmt; DEALLOCATE PREPARE ovc_stmt;
 
+SET @ovc_ddl = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'projects' AND COLUMN_NAME = 'cover_url') = 0,
+  'ALTER TABLE projects ADD COLUMN cover_url VARCHAR(2048) NULL AFTER cover_media_id',
+  'SELECT 1'
+);
+PREPARE ovc_stmt FROM @ovc_ddl; EXECUTE ovc_stmt; DEALLOCATE PREPARE ovc_stmt;
+
 INSERT IGNORE INTO schema_version (version, description)
 VALUES (3, 'Complete OVC content, media, projects and enquiries schema; single-import installer');
+INSERT IGNORE INTO schema_version (version, description)
+VALUES (4, 'Projects support direct GitHub-hosted image URLs');

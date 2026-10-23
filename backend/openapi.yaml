@@ -9,8 +9,8 @@ info:
     Production base URL is configured by the hosting owner; the default path
     prefix is /api.
 servers:
-  - url: https://ovcconstructions.com/api
-    description: OVC PHP API mounted at /api on the primary domain.
+  - url: https://api.ovcconstructions.com/api
+    description: OVC PHP API hosted at api.ovcconstructions.com.
 tags:
   - name: System
   - name: Content
@@ -518,6 +518,7 @@ components:
         description: {type: string, maxLength: 12000}
         category: {type: string, maxLength: 120}
         cover_media_id: {type: [integer, 'null'], minimum: 1}
+        cover_url: {type: [string, 'null'], format: uri, maxLength: 2048, description: HTTPS URL hosted on raw.githubusercontent.com, user-images.githubusercontent.com or gist.githubusercontent.com.}
         status: {type: string, enum: [draft, published], default: draft}
         sort_order: {type: integer, minimum: -1000000, maximum: 1000000, default: 0}
     ProjectPatch:
@@ -531,6 +532,7 @@ components:
         description: {type: string, maxLength: 12000}
         category: {type: string, maxLength: 120}
         cover_media_id: {type: [integer, 'null'], minimum: 1}
+        cover_url: {type: [string, 'null'], format: uri, maxLength: 2048, description: HTTPS URL hosted on raw.githubusercontent.com, user-images.githubusercontent.com or gist.githubusercontent.com.}
         status: {type: string, enum: [draft, published]}
         sort_order: {type: integer, minimum: -1000000, maximum: 1000000}
     Media:

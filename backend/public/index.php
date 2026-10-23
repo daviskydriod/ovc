@@ -252,6 +252,19 @@ function project_fields(array $body, bool $partial): array {
         if ($cover !== null) { $check = db()->prepare("SELECT id FROM media WHERE id = :id AND media_type = 'image'"); $check->execute(['id' => $cover]); if (!$check->fetch()) json_response(['error' => 'cover_media_id must reference an existing image.'], 422); }
         $fields['cover_media_id'] = $cover;
     } elseif (!$partial) $fields['cover_media_id'] = null;
+    if (array_key_exists('cover_url', $body)) {
+        $coverUrl = $body['cover_url'];
+        if ($coverUrl !== null && !is_string($coverUrl)) json_response(['error' => 'cover_url must be a GitHub HTTPS image URL or null.'], 422);
+        $coverUrl = trim((string)$coverUrl);
+        if ($coverUrl !== '') {
+            $parts = parse_url($coverUrl);
+            $allowedHosts = ['raw.githubusercontent.com', 'user-images.githubusercontent.com', 'gist.githubusercontent.com'];
+            if (strlen($coverUrl) > 2048 || !filter_var($coverUrl, FILTER_VALIDATE_URL) || ($parts['scheme'] ?? '') !== 'https' || !in_array(strtolower((string)($parts['host'] ?? '')), $allowedHosts, true) || isset($parts['user']) || isset($parts['pass']) || isset($parts['port'])) {
+                json_response(['error' => 'cover_url must be a valid HTTPS image URL hosted by GitHub. Use a raw.githubusercontent.com image link.'], 422);
+            }
+            $fields['cover_url'] = $coverUrl;
+        } else $fields['cover_url'] = null;
+    } elseif (!$partial) $fields['cover_url'] = null;
     if (array_key_exists('status', $body)) { if (!in_array($body['status'], ['draft', 'published'], true)) json_response(['error' => 'status must be draft or published.'], 422); $fields['status'] = $body['status']; }
     elseif (!$partial) $fields['status'] = 'draft';
     if (array_key_exists('sort_order', $body)) { if (!is_int($body['sort_order']) || abs($body['sort_order']) > 1000000) json_response(['error' => 'sort_order must be an integer within ±1000000.'], 422); $fields['sort_order'] = $body['sort_order']; }
@@ -264,23 +277,23 @@ function handle_projects_list(bool $admin): never {
     $page = page_params(); $where = $admin ? '1=1' : "p.status = 'published'";
     if ($admin && isset($_GET['status']) && $_GET['status'] !== '') { if (!in_array($_GET['status'], ['draft', 'published'], true)) json_response(['error' => 'status must be draft or published.'], 400); $where .= ' AND p.status = ' . db()->quote($_GET['status']); }
     $pdo = db(); $total = (int)$pdo->query("SELECT COUNT(*) FROM projects p WHERE {$where}")->fetchColumn();
-    $sql = "SELECT p.id, p.slug, p.title, p.summary, p.description, p.category, p.cover_media_id, p.status, p.sort_order, p.created_at, p.updated_at, m.id AS joined_media_id, m.alt_text AS cover_alt_text FROM projects p LEFT JOIN media m ON m.id = p.cover_media_id AND m.is_published = 1 WHERE {$where} ORDER BY p.sort_order ASC, p.created_at DESC LIMIT :limit OFFSET :offset";
+    $sql = "SELECT p.id, p.slug, p.title, p.summary, p.description, p.category, p.cover_media_id, p.cover_url, p.status, p.sort_order, p.created_at, p.updated_at, m.id AS joined_media_id, m.alt_text AS cover_alt_text FROM projects p LEFT JOIN media m ON m.id = p.cover_media_id AND m.is_published = 1 WHERE {$where} ORDER BY p.sort_order ASC, p.created_at DESC LIMIT :limit OFFSET :offset";
     $stmt = $pdo->prepare($sql); $stmt->bindValue('limit', $page['limit'], PDO::PARAM_INT); $stmt->bindValue('offset', $page['offset'], PDO::PARAM_INT); $stmt->execute(); $items = $stmt->fetchAll();
-    foreach ($items as &$item) { $item['id'] = (int)$item['id']; $item['cover_media_id'] = $item['cover_media_id'] === null ? null : (int)$item['cover_media_id']; $item['sort_order'] = (int)$item['sort_order']; $item['cover_url'] = $item['joined_media_id'] ? rtrim((string)env_value('PUBLIC_API_URL', ''), '/') . '/media/' . $item['joined_media_id'] : null; unset($item['joined_media_id']); if (!$admin) { unset($item['status'], $item['sort_order'], $item['cover_media_id']); } }
+    foreach ($items as &$item) { $item['id'] = (int)$item['id']; $item['cover_media_id'] = $item['cover_media_id'] === null ? null : (int)$item['cover_media_id']; $item['sort_order'] = (int)$item['sort_order']; $item['cover_url'] = $item['cover_url'] ?: ($item['joined_media_id'] ? rtrim((string)env_value('PUBLIC_API_URL', ''), '/') . '/media/' . $item['joined_media_id'] : null); unset($item['joined_media_id']); if (!$admin) { unset($item['status'], $item['sort_order'], $item['cover_media_id']); } }
     unset($item);
     json_response(['projects' => $items, 'pagination' => ['limit' => $page['limit'], 'offset' => $page['offset'], 'total' => $total, 'hasMore' => $page['offset'] + count($items) < $total]]);
 }
 
 function handle_project_detail(string $slug): never {
-    $stmt = db()->prepare("SELECT p.id, p.slug, p.title, p.summary, p.description, p.category, p.created_at, p.updated_at, m.id AS media_id, m.alt_text AS cover_alt_text FROM projects p LEFT JOIN media m ON m.id = p.cover_media_id AND m.is_published = 1 WHERE p.slug = :slug AND p.status = 'published'");
+    $stmt = db()->prepare("SELECT p.id, p.slug, p.title, p.summary, p.description, p.category, p.cover_url, p.created_at, p.updated_at, m.id AS media_id, m.alt_text AS cover_alt_text FROM projects p LEFT JOIN media m ON m.id = p.cover_media_id AND m.is_published = 1 WHERE p.slug = :slug AND p.status = 'published'");
     $stmt->execute(['slug' => $slug]); $item = $stmt->fetch(); if (!$item) json_response(['error' => 'Project not found.'], 404);
-    $item['id'] = (int)$item['id']; $item['cover_url'] = $item['media_id'] ? rtrim((string)env_value('PUBLIC_API_URL', ''), '/') . '/media/' . $item['media_id'] : null; unset($item['media_id']);
+    $item['id'] = (int)$item['id']; $item['cover_url'] = $item['cover_url'] ?: ($item['media_id'] ? rtrim((string)env_value('PUBLIC_API_URL', ''), '/') . '/media/' . $item['media_id'] : null); unset($item['media_id']);
     json_response(['project' => $item]);
 }
 
 function handle_admin_project_detail(int $id): never {
     require_admin();
-    $stmt = db()->prepare('SELECT id, slug, title, summary, description, category, cover_media_id, status, sort_order, created_at, updated_at FROM projects WHERE id = :id');
+    $stmt = db()->prepare('SELECT id, slug, title, summary, description, category, cover_media_id, cover_url, status, sort_order, created_at, updated_at FROM projects WHERE id = :id');
     $stmt->execute(['id' => $id]); $item = $stmt->fetch();
     if (!$item) json_response(['error' => 'Project not found.'], 404);
     $item['id'] = (int)$item['id']; $item['cover_media_id'] = $item['cover_media_id'] === null ? null : (int)$item['cover_media_id']; $item['sort_order'] = (int)$item['sort_order'];
@@ -289,7 +302,7 @@ function handle_admin_project_detail(int $id): never {
 
 function handle_project_create(): never {
     require_admin(); require_csrf(); $fields = project_fields(request_json(24000), false);
-    $stmt = db()->prepare('INSERT INTO projects (slug, title, summary, description, category, cover_media_id, status, sort_order) VALUES (:slug, :title, :summary, :description, :category, :cover_media_id, :status, :sort_order)');
+    $stmt = db()->prepare('INSERT INTO projects (slug, title, summary, description, category, cover_media_id, cover_url, status, sort_order) VALUES (:slug, :title, :summary, :description, :category, :cover_media_id, :cover_url, :status, :sort_order)');
     try { $stmt->execute($fields); } catch (PDOException $e) { if ((string)$e->getCode() === '23000') json_response(['error' => 'A project with this slug already exists.'], 409); throw $e; }
     json_response(['ok' => true, 'id' => (int)db()->lastInsertId(), 'slug' => $fields['slug']], 201);
 }
