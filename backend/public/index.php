@@ -249,7 +249,7 @@ function project_fields(array $body, bool $partial): array {
     if (array_key_exists('cover_media_id', $body)) {
         $cover = $body['cover_media_id'];
         if ($cover !== null && (!is_int($cover) || $cover < 1)) json_response(['error' => 'cover_media_id must be a positive media id or null.'], 422);
-        if ($cover !== null) { $check = db()->prepare("SELECT id FROM media WHERE id = :id AND media_type = 'image'"); $check->execute(['id' => $cover]); if (!$check->fetch()) json_response(['error' => 'cover_media_id must reference an existing image.'], 422); }
+        if ($cover !== null) { $check = db()->prepare("SELECT id FROM media WHERE id = :id AND media_type = 'image'"); $check->execute(['id' => $cover]); if (!$check->fetch()) json_response(['error' => 'cover_media_id must reference an existing image.'], 422); $fields['cover_url'] = null; }
         $fields['cover_media_id'] = $cover;
     } elseif (!$partial) $fields['cover_media_id'] = null;
     if (array_key_exists('cover_url', $body)) {
@@ -318,9 +318,31 @@ function handle_project_update(int $id): never {
 }
 
 function handle_project_delete(int $id): never {
-    require_admin(); require_csrf(); $stmt = db()->prepare('DELETE FROM projects WHERE id = :id'); $stmt->execute(['id' => $id]);
-    if (!$stmt->rowCount()) json_response(['error' => 'Project not found.'], 404);
-    json_response(['ok' => true, 'id' => $id]);
+    require_admin(); require_csrf();
+    $pdo = db(); $pdo->beginTransaction();
+    $find = $pdo->prepare('SELECT cover_media_id FROM projects WHERE id = :id FOR UPDATE'); $find->execute(['id' => $id]); $project = $find->fetch();
+    if (!$project) { $pdo->rollBack(); json_response(['error' => 'Project not found.'], 404); }
+    $mediaId = $project['cover_media_id'] === null ? null : (int)$project['cover_media_id'];
+    $pdo->prepare('DELETE FROM projects WHERE id = :id')->execute(['id' => $id]);
+    $mediaFilename = null;
+    if ($mediaId !== null) {
+        $media = $pdo->prepare('SELECT filename, media_type FROM media WHERE id = :id FOR UPDATE'); $media->execute(['id' => $mediaId]);
+        $mediaRow = $media->fetch();
+        if ($mediaRow && $mediaRow['media_type'] === 'image') {
+            $references = $pdo->prepare('SELECT COUNT(*) FROM projects WHERE cover_media_id = :id'); $references->execute(['id' => $mediaId]);
+            if ((int)$references->fetchColumn() === 0) {
+                $mediaFilename = $mediaRow['filename'];
+                $pdo->prepare('DELETE FROM media WHERE id = :id')->execute(['id' => $mediaId]);
+            }
+        }
+    }
+    $pdo->commit();
+    if ($mediaFilename !== null) {
+        $storage = rtrim((string)env_value('MEDIA_STORAGE_PATH', dirname(__DIR__) . '/storage/media'), '/');
+        $file = $storage . '/' . basename((string)$mediaFilename);
+        if (is_file($file) && !@unlink($file)) error_log('OVC project cover cleanup failed for media id ' . $mediaId);
+    }
+    json_response(['ok' => true, 'id' => $id, 'removed_cover_media' => $mediaFilename !== null]);
 }
 
 try {

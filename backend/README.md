@@ -93,7 +93,7 @@ Returns a single saved section as `{ "key": "home", "content": { ... }, "updated
 
 ### Projects and portfolio records
 
-The public Projects page is API/database driven and does not include the former static image gallery. Public endpoints expose only published database records. A project can use `cover_url` for a direct HTTPS image from GitHub's raw image hosts; legacy records may still reference a media-library item. The dashboard does not upload or edit project images; use the provided SQL template for GitHub image URLs. The Next.js portfolio is pre-rendered and revalidates every five minutes; new slugs are generated on the first request after publication and included in the sitemap on its next revalidation.
+The public Projects page is API/database driven and does not include the former static image gallery. Public endpoints expose only published database records. A project can use a securely uploaded media-library image or `cover_url` for a direct HTTPS image from GitHub's raw image hosts; the SQL template supports GitHub links. The dashboard supports image upload and cover selection, while the SQL template remains an alternative for adding project rows and GitHub URLs. The Next.js portfolio is pre-rendered and revalidates every five minutes; new slugs are generated on the first request after publication and included in the sitemap on its next revalidation.
 
 #### `GET /api/projects?limit=25&offset=0`
 
@@ -134,7 +134,7 @@ Requires an admin session and CSRF header. Send one or more of the `POST` fields
 
 #### `DELETE /api/admin/projects/{id}`
 
-Requires an admin session and CSRF header. Permanently deletes the project record; the referenced media item is retained. Returns `{ "ok": true, "id": 42 }` or 404 if absent.
+Requires an admin session and CSRF header. Permanently deletes the project record. If its uploaded cover image is not referenced by another project, the media row and stored file are also removed. Shared uploaded covers are kept; GitHub-hosted source files are never deleted from GitHub by this API. Returns `{ "ok": true, "id": 42, "removed_cover_media": true|false }` or 404 if absent.
 
 ### Public media
 
@@ -236,9 +236,9 @@ The schema separates four functional domains:
 |---|---|---|
 | `site_sections` | Flexible CMS page sections | Primary key is a slug; JSON payload; created/updated timestamps. |
 | `media` | File metadata and publication state | Files are stored outside web root; unique random filename; MIME, type, alt text and sort order indexed for public reads. |
-| `projects` | Admin-managed project portfolio records | Unique slug, draft/published status, sort order and optional FK to cover media; deleting a media item clears only the reference. |
+| `projects` | API-managed project portfolio records | Unique slug, draft/published status, sort order, optional uploaded-media FK or direct GitHub `cover_url`. |
 | `contact_enquiries` | Public project requests | Personal contact details, status and private staff note; raw IP is not stored; status/time and HMAC hash/time indexes support inbox and rate limiting. |
-| `schema_version` | Applied database version | Version 2 records the organized schema release. |
+| `schema_version` | Applied database version | Version 4 records GitHub project cover URL support. |
 
 All tables use InnoDB and `utf8mb4`. Prepared statements are used for data values. The app account should have only SELECT/INSERT/UPDATE/DELETE access to the selected database (no schema administration at runtime). Enquiry contact details are personal data: limit access, define a retention period, delete records when no longer required, and restrict database backups. `internal_note` is admin-only.
 
@@ -255,4 +255,4 @@ All tables use InnoDB and `utf8mb4`. Prepared statements are used for data value
 
 ## 6. Compatibility and limitations
 
-The single administrator account is configured with environment variables; there is no multi-user roles interface. The portfolio supports both the original version-controlled client WebP gallery and new CMS-managed project records. Project covers are selected from uploaded image media. The public enquiry endpoint stores messages in MySQL but does not send email; the protected admin inbox is the delivery mechanism. Hosting, DNS, database credentials and deployment are configured by the site owner and are not included in source control.
+The single administrator account is configured with private settings; there is no multi-user roles interface. The public Projects pages use published API/database records only. Project covers can be uploaded to private media storage and selected in the dashboard, or linked from GitHub through SQL/API. Deleting a project removes its unique uploaded cover file when no other project uses it; GitHub files are not deleted by the cPanel API. The public enquiry endpoint stores messages in MySQL but does not send email; the protected admin inbox is the delivery mechanism. Hosting, DNS, database credentials and deployment are configured by the site owner and are not included in source control.

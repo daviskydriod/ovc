@@ -1,4 +1,4 @@
--- OVC project import template for phpMyAdmin.
+-- OVC project import template for phpMyAdmin. Dashboard image uploads are also supported.
 -- First choose a title, factual description, category, slug and image for each project.
 -- Replace every REPLACE_ME value before uncommenting/running the INSERT.
 -- New records default to draft. Change status to 'published' only after review.
@@ -19,7 +19,7 @@
 --   0
 -- );
 --
--- Available client-provided image URLs (copy one URL into cover_url):
+-- Available client-provided image URLs for SQL project rows (copy one URL into cover_url):
 -- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-building-construction-photo.webp
 -- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-exterior-photo-01.webp
 -- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-exterior-render-01.webp

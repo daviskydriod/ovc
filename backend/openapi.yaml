@@ -387,7 +387,7 @@ paths:
       security: [{adminCookie: []}]
       parameters: [{$ref: '#/components/parameters/Id'}, {$ref: '#/components/parameters/CsrfHeader'}]
       responses:
-        '200': {description: Project deleted.}
+        '200': {description: Project deleted; an unshared uploaded cover file is also removed, shared media and GitHub source files remain.}
         '404': {$ref: '#/components/responses/NotFound'}
   /admin/enquiries:
     get:
