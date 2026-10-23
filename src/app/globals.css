@@ -343,6 +343,7 @@ button { color: inherit; }
 .admin-media-layout .admin-media-list { margin-top: 25px; }
 .admin-project-image-upload { margin: 4px 0 20px; }
 .admin-project-image-upload h3 { margin: 0 0 14px; color: var(--navy); font-family: "Montserrat Variable", sans-serif; font-size: 16px; }
+.admin-project-image-upload > p { margin: 0 0 14px; color: var(--muted); font-size: 12px; line-height: 1.65; }
 .admin-project-image-upload input[type="file"] { min-height: 44px; }
 .admin-enquiry-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; margin: 12px 0 16px; }
 .admin-enquiry-details > p, .admin-enquiry-details > div { margin: 0; color: var(--ink); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
