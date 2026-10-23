@@ -1,6 +1,6 @@
 # Okechukwu Venatius Chibuike Ltd. — Website
 
-A responsive site for OVC’s construction and architectural-finishing services, built with Next.js App Router, React, TypeScript, Tailwind CSS and Lucide icons. The repository also includes a separate PHP/MySQL content API and Next.js admin dashboard.
+A responsive, search-optimized OVC site built with Next.js App Router, React and TypeScript. It includes a PHP/MySQL API, an admin content studio, project-record CRUD, media management and a real project enquiry workflow.
 
 ## Run locally
 
@@ -13,32 +13,37 @@ npm run dev
 
 Open `http://localhost:3000`. Quality checks: `npm run typecheck` and `npm run build`.
 
-## Pages
+## Public pages
 
-- `/` — Home
-- `/about` — About Us
-- `/services` — Services
-- `/projects` — Projects and portfolio
-- `/contact` — Contact details and project enquiry form
-- `/admin` — Custom responsive content studio with page tabs, gallery selection and media upload
-- `/sitemap.xml` and `/robots.txt` — metadata routes
+- `/` — Home page with seven content sections.
+- `/about` — Company information, service focus and process sections.
+- `/services` — Service directory, scope guidance and enquiry sections.
+- `/projects` — Client-supplied gallery plus published CMS project records.
+- `/projects/[slug]` — Project detail pages generated at build time for published records; additional slugs render on demand.
+- `/contact` — Direct phone/WhatsApp contact options for every supplied number, project enquiry form and practical contact guidance.
+- `/admin` — Protected content studio for page copy, client image selection, project CRUD, uploads and enquiries.
+- `/sitemap.xml` and `/robots.txt` — SEO metadata routes. Published project slugs are added to the sitemap.
+
+Each public marketing page contains at least seven distinct content sections. Canonical URLs, page metadata, sitemap, Open Graph information and semantic headings are provided. Public pages use Next.js pre-rendering and incremental revalidation at five-minute intervals when the PHP API is configured; newly published project routes are statically generated where available and rendered on-demand otherwise.
 
 The route declaration is in [`public/manus-routes.json`](public/manus-routes.json).
 
 ## Contact enquiries
 
-The contact form validates submissions in the browser and again on the PHP API, then stores them in MySQL. Authenticated staff can read submitted requests in the `/admin` Enquiries tab. Configure `NEXT_PUBLIC_CMS_API_URL` in Vercel and follow `backend/README.md` to install the updated schema and set `RATE_LIMIT_HMAC_KEY`; without a configured API, visitors are directed to call the published phone numbers.
+The contact form validates submissions in the browser and again in the PHP API, then stores accepted requests in MySQL. Authenticated staff review and update requests in the `/admin` Enquiries tab. Visitors can call or open WhatsApp for each supplied phone number; WhatsApp chats depend on the corresponding number having an active WhatsApp account. Configure `NEXT_PUBLIC_CMS_API_URL` and follow [`backend/README.md`](backend/README.md) before launch.
 
-The supplied master logo is stored at `public/brand/ovc-master-logo.png` and must remain unchanged. Client-provided images are organized and converted to WebP under `public/projects/`; the site uses no stock or generated project imagery. Architectural renders and drawings are labelled as such, not as confirmed completed work.
+## Images and company claims
 
-The site uses only the business name, motto, service scope and quality/customer-satisfaction emphasis supplied in the brief. No project names, locations, history, credentials, warranties or performance claims have been invented. Review business details and maintain an appropriate retention schedule for personal enquiry information.
+The original master logo remains unchanged in `public/brand/ovc-master-logo.png`. The newly supplied brand pack is used for the transparent primary logo in the header, reverse white logo in the dark footer, and official illustrations on the service cards. Client-provided project images are organized and converted to WebP under `public/projects/`; no stock or generated project imagery is used. Renderings and drawings are labelled as such, not as confirmed completed work. Site copy avoids unverified history, credentials, project names, locations, warranties and performance claims.
 
 ## PHP/MySQL backend and admin dashboard
 
-The PHP 8.1+ API, MySQL schema, deployment instructions and endpoint documentation are in [`backend/README.md`](backend/README.md). Import `backend/database/schema.sql`, configure the backend environment variables, and host `backend/public/` as the PHP document root. Set `NEXT_PUBLIC_CMS_API_URL` at Next.js build/runtime to the API base URL, for example `https://api.example.com/api`, and allow the exact website origin in the backend's `CORS_ALLOWED_ORIGINS` for cross-origin session requests.
+The full endpoint guide is [`backend/README.md`](backend/README.md); machine-readable OpenAPI 3.1 is [`backend/openapi.yaml`](backend/openapi.yaml). Fresh installations import `backend/database/schema.sql`. Existing installations apply the numbered SQL migrations documented in the backend guide. A cPanel-ready archive can be created from the `backend/` folder and includes PHP source, public front controller, schema, migrations, `.env.example`, endpoint documentation and OpenAPI contract.
 
-The `/admin` dashboard provides mobile-friendly tabs for Home, About, Services, Projects & Images, Contact, Enquiries, and Uploads. It saves labelled content fields to MySQL, lets the administrator choose which supplied WebP images appear in the portfolio, manages API uploads, and displays incoming project requests. Public page copy and portfolio image selection read the saved CMS content when the API is configured. `NEXT_PUBLIC_CMS_API_URL` must be set in Vercel after the PHP API is hosted; until then, the approved defaults and client image gallery are used. Never commit production credentials or real `.env` files. The production domain is configured for SEO metadata, but production hosting and DNS are not changed by this repository update.
+The `/admin` dashboard provides Home, About, Services, Projects & Images, Project Records, Contact, Enquiries and Uploads tabs. Project Records supports create, read, update and delete, draft/published status, ordering and a selected uploaded cover image. Published projects appear in the public portfolio and project detail routes. New backend images can be managed and marked public/private.
 
-## Production domain and Vercel
+For cPanel, configure the API subdomain document root to `backend/public/`, keep `src/`, `database/` and media storage outside that public root, import the schema or migrations, and set production secrets in the host environment manager. Set `NEXT_PUBLIC_CMS_API_URL=https://<your-api-host>/api` in the Next.js host and allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. Never commit real passwords or `.env` files.
 
-The canonical URLs, sitemap, Open Graph/Twitter metadata and structured-data origin use `https://ovcconstructions.com` by default. In Vercel, import this GitHub repository as a Next.js project, keep the repository root as the project root, and set `NEXT_PUBLIC_SITE_URL=https://ovcconstructions.com` in the project environment for Production. Set `NEXT_PUBLIC_CMS_API_URL=https://<your-api-host>/api` after PHP hosting is ready. Deployments on Vercel are not triggered from this task; pushing the repository does not change DNS or production hosting settings.
+## Production domain and hosting
+
+Canonical URLs, sitemap and social metadata use `https://ovcconstructions.com` by default. Set `NEXT_PUBLIC_SITE_URL=https://ovcconstructions.com` in the Next.js hosting environment. Repository changes and pull-request merges do not configure DNS, cPanel or Vercel hosting, and do not trigger a deployment by themselves.

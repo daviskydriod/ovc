@@ -10,7 +10,7 @@ export default function SiteFooter() {
       <div className="footer-main shell">
         <div className="footer-brand-column">
           <Link className="footer-logo-link" href="/" aria-label={`${COMPANY.name} home`}>
-            <Image src="/brand/ovc-master-logo.png" alt={`${COMPANY.name} original logo`} width={1959} height={803} className="footer-logo" sizes="(max-width: 700px) 138px, 158px" />
+            <Image src="/brand/ovc-reverse-white-transparent.png" alt={`${COMPANY.name} logo`} width={369} height={220} className="footer-logo" sizes="(max-width: 700px) 110px, 120px" />
           </Link>
           <p>Construction and architectural finishing, with a focus on considered workmanship and customer care.</p>
           <span className="footer-motto">{COMPANY.motto}</span>

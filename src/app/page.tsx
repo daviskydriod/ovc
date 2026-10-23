@@ -10,6 +10,7 @@ import { getPageContent } from "@/lib/cms";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata = pageMetadata("Construction & Architectural Finishing", "Professional construction, architectural finishing and building maintenance services focused on quality workmanship and customer satisfaction.", "/");
+export const revalidate = 300;
 
 const strengths = [
   { number: "01", title: "Attention to detail", text: "A quality-focused approach to construction and finishing requirements." },

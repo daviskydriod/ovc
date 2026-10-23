@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useId, useState } from "react";
+import { FormEvent, useEffect, useId, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { services } from "@/data/services";
 import { validateQuote } from "@/lib/quote-validation";
@@ -16,6 +16,15 @@ export default function QuoteForm({ initialService = "" }: { initialService?: st
   const [submitted, setSubmitted] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [defaultService, setDefaultService] = useState(initialService);
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("service") || "";
+    if (services.some((service) => service.title === requested)) {
+      setDefaultService(requested);
+      setValues((current) => current.service ? current : { ...current, service: requested });
+    }
+  }, []);
 
   function update(field: QuoteField, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -51,7 +60,7 @@ export default function QuoteForm({ initialService = "" }: { initialService?: st
         if (payload.fields && typeof payload.fields === "object") setErrors(payload.fields as Partial<Record<QuoteField, string>>);
         throw new Error(payload.error || "We couldn't send your enquiry. Please try again or call us.");
       }
-      setValues({ ...initialValues, service: initialService });
+      setValues({ ...initialValues, service: defaultService });
       setSubmitted(true);
       setMessage("Your enquiry has been received. The OVC team will contact you using the details you provided.");
     } catch (error) {

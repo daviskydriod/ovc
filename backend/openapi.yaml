@@ -1,0 +1,582 @@
+openapi: 3.1.0
+info:
+  title: OVC Website API
+  version: 1.0.0
+  description: >-
+    PHP 8.1 and MySQL API for public site content, portfolio projects, media,
+    project enquiries and session-authenticated administration. Production base
+    URL is configured by the hosting owner; the default path prefix is /api.
+servers:
+  - url: https://api.example.com/api
+    description: Replace with the API host configured in cPanel.
+tags:
+  - name: System
+  - name: Content
+  - name: Projects
+  - name: Media
+  - name: Enquiries
+  - name: Admin authentication
+  - name: Admin content
+  - name: Admin media
+  - name: Admin projects
+  - name: Admin enquiries
+security: []
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Check service and database readiness
+      responses:
+        '200':
+          description: All required application tables are available.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /content:
+    get:
+      tags: [Content]
+      summary: Read all saved site sections
+      responses:
+        '200':
+          description: Section content and update timestamps keyed by section slug.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sections, updatedAt]
+                properties:
+                  sections: {type: object, additionalProperties: {type: object}}
+                  updatedAt: {type: object, additionalProperties: {type: string, format: date-time}}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /content/{sectionKey}:
+    get:
+      tags: [Content]
+      summary: Read one saved section
+      parameters:
+        - name: sectionKey
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-z0-9_-]{1,80}$'}
+      responses:
+        '200':
+          description: Saved section content.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [key, content, updatedAt]
+                properties:
+                  key: {type: string}
+                  content: {type: object}
+                  updatedAt: {type: string, format: date-time}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /contact:
+    post:
+      tags: [Enquiries]
+      summary: Submit a project enquiry
+      description: Public endpoint. Five submissions per IP HMAC hash are accepted within 15 minutes; honeypot submissions receive a generic 202 and are not stored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ContactSubmission'}
+      responses:
+        '201':
+          description: Enquiry stored successfully.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Created'}
+        '202':
+          description: Honeypot response; no enquiry was stored.
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: Rate limit exceeded.}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /projects:
+    get:
+      tags: [Projects]
+      summary: List published projects
+      parameters:
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Offset'}
+      responses:
+        '200':
+          description: Published project records, sorted by order and creation time.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [projects, pagination]
+                properties:
+                  projects: {type: array, items: {$ref: '#/components/schemas/PublicProject'}}
+                  pagination: {$ref: '#/components/schemas/Pagination'}
+  /projects/{slug}:
+    get:
+      tags: [Projects]
+      summary: Read one published project by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'}
+      responses:
+        '200':
+          description: Published project details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project: {$ref: '#/components/schemas/PublicProject'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /media:
+    get:
+      tags: [Media]
+      summary: List published media metadata
+      parameters:
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Offset'}
+        - name: type
+          in: query
+          schema: {type: string, enum: [image, video]}
+      responses:
+        '200':
+          description: Published media records and pagination metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  media: {type: array, items: {$ref: '#/components/schemas/Media'}}
+                  pagination: {$ref: '#/components/schemas/Pagination'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+  /media/{id}:
+    get:
+      tags: [Media]
+      summary: Stream one published media file
+      parameters:
+        - {$ref: '#/components/parameters/Id'}
+      responses:
+        '200':
+          description: Binary image or video with detected Content-Type.
+          content:
+            image/*: {schema: {type: string, format: binary}}
+            video/*: {schema: {type: string, format: binary}}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /admin/login:
+    post:
+      tags: [Admin authentication]
+      summary: Authenticate the configured administrator
+      description: "Sets the HttpOnly ovc_admin session cookie and returns the CSRF token. Use credentials: include on cross-origin browser requests."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string, maxLength: 120}
+                password: {type: string, format: password, maxLength: 256}
+      responses:
+        '200':
+          description: Authenticated session established.
+          headers:
+            Set-Cookie: {schema: {type: string}, description: HttpOnly session cookie; Secure and SameSite according to configuration.}
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean}
+                  username: {type: string}
+                  csrfToken: {type: string}
+                  expires: {type: string}
+        '401': {description: Credentials are invalid.}
+        '429': {description: Too many sign-in attempts.}
+  /admin/session:
+    get:
+      tags: [Admin authentication]
+      summary: Check current administrator session
+      security: [{adminCookie: []}]
+      responses:
+        '200':
+          description: Session and CSRF token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authenticated: {type: boolean}
+                  username: {type: string}
+                  csrfToken: {type: string}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /admin/csrf:
+    get:
+      tags: [Admin authentication]
+      summary: Obtain a CSRF token for the active session
+      security: [{adminCookie: []}]
+      responses:
+        '200':
+          description: CSRF token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {csrfToken: {type: string}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /admin/logout:
+    post:
+      tags: [Admin authentication]
+      summary: End administrator session
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/CsrfHeader'}]
+      responses:
+        '200': {description: Session and cookie invalidated.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /admin/content:
+    put:
+      tags: [Admin content]
+      summary: Create or replace one section JSON object
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/CsrfHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, content]
+              properties:
+                key: {type: string, pattern: '^[a-z0-9_-]{1,80}$'}
+                content: {type: object, description: Plain-text field values; max serialized size 200 KB.}
+      responses:
+        '200': {description: Section upserted.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /admin/media:
+    get:
+      tags: [Admin media]
+      summary: List all uploaded media, including unpublished items
+      security: [{adminCookie: []}]
+      parameters:
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Offset'}
+        - name: type
+          in: query
+          schema: {type: string, enum: [image, video]}
+      responses:
+        '200': {description: Private media inventory and pagination.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+    post:
+      tags: [Admin media]
+      summary: Upload one image or video
+      description: Detected MIME must be JPEG, PNG, WebP, GIF, MP4, WebM or MOV. Files are stored outside the web root under a random name.
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/CsrfHeader'}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+                title: {type: string, maxLength: 180}
+                alt_text: {type: string, maxLength: 300}
+      responses:
+        '201': {description: Media stored; generated id, filename, media type and URL returned.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '413': {description: Upload exceeds configured byte limit.}
+        '415': {description: MIME type unsupported or image is corrupt.}
+  /admin/media/{id}:
+    patch:
+      tags: [Admin media]
+      summary: Update media title, description, publication or ordering
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/Id'}, {$ref: '#/components/parameters/CsrfHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                title: {type: string, maxLength: 180}
+                alt_text: {type: string, maxLength: 300}
+                is_published: {type: boolean}
+                sort_order: {type: integer, minimum: -1000000, maximum: 1000000}
+      responses:
+        '200': {description: Media metadata updated.}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [Admin media]
+      summary: Permanently delete media row and stored binary
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/Id'}, {$ref: '#/components/parameters/CsrfHeader'}]
+      responses:
+        '200': {description: Media deleted.}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /admin/projects:
+    get:
+      tags: [Admin projects]
+      summary: List project drafts and published records
+      security: [{adminCookie: []}]
+      parameters:
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Offset'}
+        - name: status
+          in: query
+          schema: {type: string, enum: [draft, published]}
+      responses:
+        '200': {description: All project records visible to the administrator and pagination.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+    post:
+      tags: [Admin projects]
+      summary: Create project record
+      description: New records default to draft. Publishing a record makes it appear in public project listing and the ISR portfolio.
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/CsrfHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProjectWrite'}
+      responses:
+        '201': {description: Project created; includes assigned id and slug.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {description: Slug already exists.}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /admin/projects/{id}:
+    get:
+      tags: [Admin projects]
+      summary: Read a draft or published project by id
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses:
+        '200': {description: Project record including private draft state.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    patch:
+      tags: [Admin projects]
+      summary: Partially update a project record
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/Id'}, {$ref: '#/components/parameters/CsrfHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProjectPatch'}
+      responses:
+        '200': {description: Project updated.}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Slug already exists.}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [Admin projects]
+      summary: Permanently delete a project record
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/Id'}, {$ref: '#/components/parameters/CsrfHeader'}]
+      responses:
+        '200': {description: Project deleted.}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /admin/enquiries:
+    get:
+      tags: [Admin enquiries]
+      summary: List enquiries with optional status filter
+      security: [{adminCookie: []}]
+      parameters:
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Offset'}
+        - name: status
+          in: query
+          schema: {type: string, enum: [new, contacted, closed]}
+      responses:
+        '200': {description: Private contact submissions and pagination metadata.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /admin/enquiries/{id}:
+    patch:
+      tags: [Admin enquiries]
+      summary: Update enquiry status and/or private internal note
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/Id'}, {$ref: '#/components/parameters/CsrfHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                status: {type: string, enum: [new, contacted, closed]}
+                internal_note: {type: string, maxLength: 2000}
+      responses:
+        '200': {description: Enquiry updated.}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [Admin enquiries]
+      summary: Permanently delete an enquiry and personal details
+      security: [{adminCookie: []}]
+      parameters: [{$ref: '#/components/parameters/Id'}, {$ref: '#/components/parameters/CsrfHeader'}]
+      responses:
+        '200': {description: Enquiry deleted.}
+        '404': {$ref: '#/components/responses/NotFound'}
+components:
+  securitySchemes:
+    adminCookie:
+      type: apiKey
+      in: cookie
+      name: ovc_admin
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 25}
+    Offset:
+      name: offset
+      in: query
+      schema: {type: integer, minimum: 0, default: 0}
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: {type: integer, minimum: 1}
+    CsrfHeader:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema: {type: string}
+  schemas:
+    Health:
+      type: object
+      properties:
+        ok: {type: boolean}
+        service: {type: string}
+        checks:
+          type: object
+          properties:
+            php: {type: boolean}
+            database: {type: boolean}
+            schema: {type: boolean}
+            ready: {type: boolean}
+        time: {type: string, format: date-time}
+    Pagination:
+      type: object
+      required: [limit, offset, total, hasMore]
+      properties:
+        limit: {type: integer}
+        offset: {type: integer}
+        total: {type: integer}
+        hasMore: {type: boolean}
+    Created:
+      type: object
+      properties:
+        ok: {type: boolean}
+        id: {type: integer}
+        message: {type: string}
+    ContactSubmission:
+      type: object
+      required: [fullName, phone, email, service, location, description]
+      properties:
+        fullName: {type: string, minLength: 2, maxLength: 120}
+        phone: {type: string, minLength: 7, maxLength: 40}
+        email: {type: string, format: email, maxLength: 254}
+        service: {type: string, maxLength: 120}
+        location: {type: string, minLength: 2, maxLength: 160}
+        description: {type: string, minLength: 10, maxLength: 3000}
+        website: {type: string, description: Optional honeypot; must be empty.}
+    PublicProject:
+      type: object
+      properties:
+        id: {type: integer}
+        slug: {type: string}
+        title: {type: string}
+        summary: {type: string}
+        description: {type: string}
+        category: {type: string}
+        cover_url: {type: [string, 'null'], format: uri}
+        cover_alt_text: {type: string}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    ProjectWrite:
+      type: object
+      required: [slug, title, description]
+      properties:
+        slug: {type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$', maxLength: 120}
+        title: {type: string, maxLength: 180}
+        summary: {type: string, maxLength: 500}
+        description: {type: string, maxLength: 12000}
+        category: {type: string, maxLength: 120}
+        cover_media_id: {type: [integer, 'null'], minimum: 1}
+        status: {type: string, enum: [draft, published], default: draft}
+        sort_order: {type: integer, minimum: -1000000, maximum: 1000000, default: 0}
+    ProjectPatch:
+      type: object
+      minProperties: 1
+      description: Partial JSON object; send only fields to update. At least one property is required.
+      properties:
+        slug: {type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$', maxLength: 120}
+        title: {type: string, maxLength: 180}
+        summary: {type: string, maxLength: 500}
+        description: {type: string, maxLength: 12000}
+        category: {type: string, maxLength: 120}
+        cover_media_id: {type: [integer, 'null'], minimum: 1}
+        status: {type: string, enum: [draft, published]}
+        sort_order: {type: integer, minimum: -1000000, maximum: 1000000}
+    Media:
+      type: object
+      properties:
+        id: {type: integer}
+        original_name: {type: string}
+        mime_type: {type: string}
+        media_type: {type: string, enum: [image, video]}
+        title: {type: string}
+        alt_text: {type: string}
+        is_published: {type: boolean}
+        sort_order: {type: integer}
+        url: {type: string, format: uri}
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: {type: string}
+        fields: {type: object, additionalProperties: {type: string}}
+  responses:
+    BadRequest:
+      description: Invalid query or request format.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unauthorized:
+      description: Admin session missing or expired.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Forbidden:
+      description: CSRF token or origin check failed.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    NotFound:
+      description: Requested resource not found or not publicly available.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    ValidationError:
+      description: Request failed field or schema validation.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    ServiceUnavailable:
+      description: Database or required service is unavailable.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}

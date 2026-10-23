@@ -8,3 +8,6 @@ coverage/
 *.log
 .DS_Store
 *.tsbuildinfo
+backend/config/local.php
+backend/storage/media/*
+!backend/storage/media/.htaccess
