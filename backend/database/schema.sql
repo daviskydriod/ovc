@@ -1,6 +1,8 @@
--- OVC Website: MySQL 8+ / MariaDB schema
--- Select/create the target database in cPanel/phpMyAdmin first, then import this file.
--- Existing installations should use the numbered migrations instead of re-importing.
+-- OVC Website: MySQL 8+ / compatible MariaDB single-import schema.
+-- Select the existing OVC database in cPanel/phpMyAdmin, back it up, then import this file once.
+-- This creates the complete current schema and conditionally upgrades the previous OVC schema.
+-- No application `users` table is created or required. Administrator credentials stay in private PHP configuration.
+-- This file never creates or selects a database, and is safe to import again.
 
 -- Flexible page copy managed from the admin dashboard; consume values as plain text.
 CREATE TABLE IF NOT EXISTS site_sections (
@@ -70,10 +72,72 @@ CREATE TABLE IF NOT EXISTS contact_enquiries (
   KEY idx_enquiries_ip_created (ip_hash, created_at)
 ) ENGINE=InnoDB;
 
--- Database migration tracking; version 3 includes admin-manageable project records.
+-- Migration tracking; the completed database layout is version 3.
 CREATE TABLE IF NOT EXISTS schema_version (
   version INT UNSIGNED NOT NULL PRIMARY KEY,
   description VARCHAR(180) NOT NULL,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
-INSERT IGNORE INTO schema_version (version, description) VALUES (3, 'Organized content, media, enquiries and project CRUD schema');
+
+-- Compatibility upgrades for installations made from the original OVC schema.
+-- Each ALTER is guarded by INFORMATION_SCHEMA so the same file works for both fresh
+-- databases and older OVC databases, and can be safely imported again.
+
+SET @ovc_ddl = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'site_sections' AND COLUMN_NAME = 'created_at') = 0,
+  'ALTER TABLE site_sections ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP FIRST',
+  'SELECT 1'
+);
+PREPARE ovc_stmt FROM @ovc_ddl; EXECUTE ovc_stmt; DEALLOCATE PREPARE ovc_stmt;
+
+SET @ovc_ddl = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'site_sections' AND INDEX_NAME = 'idx_site_sections_updated') = 0,
+  'ALTER TABLE site_sections ADD KEY idx_site_sections_updated (updated_at)',
+  'SELECT 1'
+);
+PREPARE ovc_stmt FROM @ovc_ddl; EXECUTE ovc_stmt; DEALLOCATE PREPARE ovc_stmt;
+
+SET @ovc_ddl = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'media' AND COLUMN_NAME = 'updated_at') = 0,
+  'ALTER TABLE media ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at',
+  'SELECT 1'
+);
+PREPARE ovc_stmt FROM @ovc_ddl; EXECUTE ovc_stmt; DEALLOCATE PREPARE ovc_stmt;
+
+SET @ovc_ddl = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'media' AND INDEX_NAME = 'idx_media_type_created') = 0,
+  'ALTER TABLE media ADD KEY idx_media_type_created (media_type, created_at)',
+  'SELECT 1'
+);
+PREPARE ovc_stmt FROM @ovc_ddl; EXECUTE ovc_stmt; DEALLOCATE PREPARE ovc_stmt;
+
+SET @ovc_ddl = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contact_enquiries' AND COLUMN_NAME = 'internal_note') = 0,
+  'ALTER TABLE contact_enquiries ADD COLUMN internal_note TEXT NULL AFTER status',
+  'SELECT 1'
+);
+PREPARE ovc_stmt FROM @ovc_ddl; EXECUTE ovc_stmt; DEALLOCATE PREPARE ovc_stmt;
+
+SET @ovc_ddl = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contact_enquiries' AND COLUMN_NAME = 'updated_at') = 0,
+  'ALTER TABLE contact_enquiries ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at',
+  'SELECT 1'
+);
+PREPARE ovc_stmt FROM @ovc_ddl; EXECUTE ovc_stmt; DEALLOCATE PREPARE ovc_stmt;
+
+SET @ovc_ddl = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contact_enquiries' AND INDEX_NAME = 'idx_enquiries_created') > 0,
+  'ALTER TABLE contact_enquiries DROP INDEX idx_enquiries_created',
+  'SELECT 1'
+);
+PREPARE ovc_stmt FROM @ovc_ddl; EXECUTE ovc_stmt; DEALLOCATE PREPARE ovc_stmt;
+
+SET @ovc_ddl = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contact_enquiries' AND INDEX_NAME = 'idx_enquiries_status_created') = 0,
+  'ALTER TABLE contact_enquiries ADD KEY idx_enquiries_status_created (status, created_at)',
+  'SELECT 1'
+);
+PREPARE ovc_stmt FROM @ovc_ddl; EXECUTE ovc_stmt; DEALLOCATE PREPARE ovc_stmt;
+
+INSERT IGNORE INTO schema_version (version, description)
+VALUES (3, 'Complete OVC content, media, projects and enquiries schema; single-import installer');

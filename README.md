@@ -38,11 +38,11 @@ The original master logo remains unchanged in `public/brand/ovc-master-logo.png`
 
 ## PHP/MySQL backend and admin dashboard
 
-The full endpoint guide is [`backend/README.md`](backend/README.md); machine-readable OpenAPI 3.1 is [`backend/openapi.yaml`](backend/openapi.yaml). Fresh installations import `backend/database/schema.sql`. Existing installations apply the numbered SQL migrations documented in the backend guide. A cPanel-ready archive can be created from the `backend/` folder and includes PHP source, public front controller, schema, migrations, `.env.example`, endpoint documentation and OpenAPI contract.
+The full endpoint guide is [`backend/README.md`](backend/README.md); machine-readable OpenAPI 3.1 is [`backend/openapi.yaml`](backend/openapi.yaml). Import `backend/database/schema.sql` once into the existing OVC database: it contains the full current schema and safely applies the supported earlier OVC column/index updates. The API uses one privately configured administrator and does not create or require a website `users` table. The cPanel archive includes the PHP API source, single SQL import, configuration examples and deployment guide.
 
 The `/admin` dashboard provides Home, About, Services, Projects & Images, Project Records, Contact, Enquiries and Uploads tabs. Project Records supports create, read, update and delete, draft/published status, ordering and a selected uploaded cover image. Published projects appear in the public portfolio and project detail routes. New backend images can be managed and marked public/private.
 
-For cPanel, configure the API subdomain document root to `backend/public/`, keep `src/`, `database/` and media storage outside that public root, import the schema or migrations, and set production secrets in the host environment manager. Set `NEXT_PUBLIC_CMS_API_URL=https://<your-api-host>/api` in the Next.js host and allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. Never commit real passwords or `.env` files.
+For cPanel, configure the API subdomain document root to `backend/public/`, keep `src/`, `database/` and media storage outside that public root, back up the existing database and import `backend/database/schema.sql` once. Configure the existing MySQL connection credentials and the single admin username/password hash privately on the PHP host. Set `NEXT_PUBLIC_CMS_API_URL=https://<your-api-host>/api` in the Next.js host and allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. Never commit real passwords or `.env` files.
 
 ## Production domain and hosting
 

@@ -4,8 +4,10 @@ info:
   version: 1.0.0
   description: >-
     PHP 8.1 and MySQL API for public site content, portfolio projects, media,
-    project enquiries and session-authenticated administration. Production base
-    URL is configured by the hosting owner; the default path prefix is /api.
+    project enquiries and session-authenticated administration. Administrator
+    credentials are configured privately; no application users table is used.
+    Production base URL is configured by the hosting owner; the default path
+    prefix is /api.
 servers:
   - url: https://api.example.com/api
     description: Replace with the API host configured in cPanel.
@@ -167,7 +169,7 @@ paths:
     post:
       tags: [Admin authentication]
       summary: Authenticate the configured administrator
-      description: "Sets the HttpOnly ovc_admin session cookie and returns the CSRF token. Use credentials: include on cross-origin browser requests."
+      description: "Compares against the single ADMIN_USERNAME and ADMIN_PASSWORD_HASH configuration values; no users-table query is performed. Sets the HttpOnly ovc_admin session cookie and returns the CSRF token. Use credentials: include on cross-origin browser requests."
       requestBody:
         required: true
         content:

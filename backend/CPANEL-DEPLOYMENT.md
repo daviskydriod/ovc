@@ -4,7 +4,7 @@ This guide accompanies `ovc-cpanel-api.zip`. It assumes an existing Next.js fron
 
 ## Before upload
 
-1. In cPanel → **MySQL Databases**, use your existing database—do not create a second one just for this setup. Use its exact prefixed database name. Ensure the PHP app has a separate database user with access to it (`SELECT`, `INSERT`, `UPDATE`, `DELETE`; schema setup/migrations additionally require DDL permissions during import). If the existing account lacks an application user, create only that user and grant access to the existing database.
+1. In cPanel → **MySQL Databases**, use your existing database—do not create a second one just for this setup. Use its exact prefixed database name and the MySQL connection account you already use for the application. The PHP API has no application `users` table; `DB_USER` is only the MySQL connection login. The account doing the import needs `CREATE`/`ALTER` permissions.
 2. In cPanel → **Domains/Subdomains**, create an API hostname such as `api.ovcconstructions.com`. Set its document root to the extracted archive's `public/` directory, for example `/home/ACCOUNT/ovc-api/public`. Do not point it to the `ovc-api/` parent. Issue/enable TLS before using admin login.
 3. Confirm the hosting account supports PHP 8.1+, PDO MySQL (`pdo_mysql`), fileinfo, PHP sessions, Apache rewrite (`mod_rewrite`) and writable private storage.
 
@@ -17,7 +17,7 @@ This guide accompanies `ovc-cpanel-api.zip`. It assumes an existing Next.js fron
 ```text
 /home/ACCOUNT/ovc-api/
 ├── config/local.php.example
-├── database/schema.sql
+├── database/schema.sql     ← one complete database import
 ├── public/index.php       ← API subdomain document root
 ├── public/.htaccess
 ├── src/bootstrap.php
@@ -30,7 +30,7 @@ This guide accompanies `ovc-cpanel-api.zip`. It assumes an existing Next.js fron
 
 ## Import the database
 
-In cPanel → **phpMyAdmin**, click your existing database, then choose **Import**. If it is empty and has no OVC tables, import `database/schema.sql`. If it already contains the earlier OVC schema, back it up and import `database/migrations/002_production_ready_api.sql` followed by `database/migrations/003_projects.sql`. The SQL files deliberately do not create or select a hard-coded database, so they work with your existing cPanel-prefixed database. Do not import both the fresh schema and migration series into the same database. If your database already has a custom schema, do not run either blindly—compare its tables/columns first and adapt the migration safely.
+In cPanel → **phpMyAdmin**, back up your existing database, click its name, then choose **Import** and import `database/schema.sql` once. This single file creates the complete current OVC schema and conditionally applies the missing fields/indexes from the earlier OVC schema. It does not create/select a database or create a website `users` table. Do not run separate migrations. If your database has a custom, non-OVC schema, do not import blindly—compare its tables/columns first and adapt safely.
 
 ## Configure the frontend
 
@@ -45,11 +45,11 @@ Redeploy the frontend after setting variables. The PHP API allows public GET rou
 
 ## Verify staging before launch
 
-1. Open `https://api.ovcconstructions.com/api/health`. Expect HTTP 200 with `checks.php`, `checks.database`, `checks.schema` and `checks.ready` all true. A 503 means check PHP error logs, DB credentials and schema/migration state.
+1. Open `https://api.ovcconstructions.com/api/health`. Expect HTTP 200 with `checks.php`, `checks.database`, `checks.schema` and `checks.ready` all true. A 503 means check PHP error logs, DB credentials and whether the one-time schema import completed.
 2. Open `/admin`, sign in with the configured account, and confirm page content, project records, uploads and enquiries load.
 3. Create a project as a draft; verify it is not public. Publish it; verify it appears at `/projects`, its `/projects/{slug}` detail page renders, and its URL appears in `/sitemap.xml` after the five-minute revalidation window.
 4. Submit a real test enquiry in staging and verify it appears in the admin inbox. Then remove the test record and ensure test personal data is not retained.
 5. Upload a small approved image, attach it as a project cover, publish the media and project, verify the public cover stream, then unpublish or delete the test media.
-6. Remove test accounts and data as appropriate, review PHP logs, and configure database/media backups and an enquiry-retention policy.
+6. Remove test records and data as appropriate, review PHP logs, and configure database/media backups and an enquiry-retention policy.
 
 The API does not send email notifications for enquiries. Staff use the protected `/admin` inbox. Keep `config/local.php`, database backups and uploaded media private.
