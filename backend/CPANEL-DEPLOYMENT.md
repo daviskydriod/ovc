@@ -12,10 +12,12 @@ This guide accompanies `ovc-cpanel-api.zip`. It assumes an existing Next.js fron
 
 1. Download `ovc-cpanel-api.zip` to your computer.
 2. In cPanel File Manager, create `/home/ACCOUNT/ovc-api/` outside `public_html`.
-3. Upload and extract the ZIP there. It creates an `ovc-api/` folder containing `public/`, `src/`, `config/`, `database/`, `storage/`, `README.md`, `.env.example` and `openapi.yaml`. Move that folder's *contents* to `/home/ACCOUNT/ovc-api/` if the archive added a nested directory, so the final layout is:
+3. Upload and extract the ZIP there. It creates an `ovc-api/` folder containing `public/`, `src/`, `config/`, `database/`, `storage/`, `.htaccess`, `.env.example` and `openapi.yaml`. Move that folder's *contents* to `/home/ACCOUNT/ovc-api/` if the archive added a nested directory, so the final layout is:
 
 ```text
 /home/ACCOUNT/ovc-api/
+├── .htaccess              ← blocks web requests for .env files
+├── .env.example           ← copy to .env; keep both outside public/
 ├── config/local.php.example
 ├── database/schema.sql     ← one complete database import
 ├── public/index.php       ← API subdomain document root
@@ -24,7 +26,7 @@ This guide accompanies `ovc-cpanel-api.zip`. It assumes an existing Next.js fron
 └── storage/media/.htaccess
 ```
 
-4. If the PHP host lets you create environment variables, use the variable names in `.env.example`. Otherwise, copy `config/local.php.example` to `config/local.php` **outside the web root**, edit the placeholders, and save it with restrictive permissions (for example `0600` where cPanel allows). Never upload real credentials into `public/` or commit them to Git.
+4. In File Manager, copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` (the same directory as `public/`, not inside it) and edit the copy with your private values. The PHP bootstrap loads this file automatically on shared hosting. The included root `.htaccess` also denies web requests for `.env` files as defense in depth; keep the API subdomain document root set to `public/`. As an alternative, use `config/local.php.example` copied to `config/local.php`, also outside the web root. Real `.env` and `config/local.php` files are excluded from Git; never put real credentials in `public/` or commit them.
 5. Generate unique strong values for `DB_PASSWORD`, `ADMIN_USERNAME`, the admin password (store only its `password_hash` output), and `RATE_LIMIT_HMAC_KEY` (at least 32 random bytes). Set `CORS_ALLOWED_ORIGINS` to exact origins, e.g. `https://ovcconstructions.com,https://www.ovcconstructions.com`; set `SESSION_COOKIE_SECURE=true`; use `SESSION_SAMESITE=Lax` for same-site subdomains. Set `PUBLIC_API_URL=https://api.ovcconstructions.com/api` and the cPanel-prefixed `DB_NAME` and `DB_USER`.
 6. Set `MEDIA_STORAGE_PATH` to a writable private absolute path outside the document root, e.g. `/home/ACCOUNT/private/ovc-media`. Create the directory and grant the PHP account write access. Keep the default upload cap and set PHP `upload_max_filesize`/`post_max_size` to at least that value.
 
@@ -52,4 +54,4 @@ Redeploy the frontend after setting variables. The PHP API allows public GET rou
 5. Upload a small approved image, attach it as a project cover, publish the media and project, verify the public cover stream, then unpublish or delete the test media.
 6. Remove test records and data as appropriate, review PHP logs, and configure database/media backups and an enquiry-retention policy.
 
-The API does not send email notifications for enquiries. Staff use the protected `/admin` inbox. Keep `config/local.php`, database backups and uploaded media private.
+The API does not send email notifications for enquiries. Staff use the protected `/admin` inbox. Keep `.env`, `config/local.php`, database backups and uploaded media private.
