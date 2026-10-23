@@ -42,6 +42,40 @@ try {
         foreach ($rows as $row) $content[$row['section_key']] = json_decode($row['content_json'], true);
         json_response(['sections' => $content]);
     }
+    if ($path === '/contact' && $method === 'POST') {
+        if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 8192) json_response(['error' => 'The request is too large.'], 413);
+        $body = request_json();
+        if (trim((string)($body['website'] ?? '')) !== '') json_response(['ok' => true], 202);
+        $fields = [];
+        foreach (['fullName' => 120, 'phone' => 40, 'email' => 254, 'service' => 120, 'location' => 160, 'description' => 3000] as $key => $max) {
+            $raw = $body[$key] ?? null;
+            if (!is_string($raw)) json_response(['error' => 'One or more fields have an invalid type.'], 422);
+            $value = trim($raw);
+            if (text_length($value) > $max) json_response(['error' => 'One or more fields exceed the allowed length.'], 422);
+            $fields[$key] = $value;
+        }
+        $emailPattern = '/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/u';
+        $validServices = ['Interior & Exterior Painting and Design', 'Wall Screeding', 'Paint Production', 'Wallpaper Installation', 'Maintenance', 'Sales of Paint', 'Stucco Finishing', 'General Construction', 'Site Supervision', 'Contracting', 'Project Management', 'Civil & Architectural Design', 'Structural Design'];
+        $errors = [];
+        if (text_length($fields['fullName']) < 2) $errors['fullName'] = 'Enter your full name.';
+        if (text_length($fields['phone']) < 7) $errors['phone'] = 'Enter a phone number we can use to contact you.';
+        if (!filter_var($fields['email'], FILTER_VALIDATE_EMAIL) || !preg_match($emailPattern, $fields['email'])) $errors['email'] = 'Enter a valid email address.';
+        if (!in_array($fields['service'], $validServices, true)) $errors['service'] = 'Choose a valid service.';
+        if (text_length($fields['location']) < 2) $errors['location'] = 'Enter the project location.';
+        if (text_length($fields['description']) < 10) $errors['description'] = 'Describe the project in at least 10 characters.';
+        if ($errors) json_response(['error' => 'Please review the enquiry details.', 'fields' => $errors], 422);
+        $rateKey = env_value('RATE_LIMIT_HMAC_KEY');
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        if (!$rateKey || !filter_var($ip, FILTER_VALIDATE_IP)) json_response(['error' => 'The enquiry service is not configured. Please contact OVC by phone.'], 503);
+        $ipHash = hash_hmac('sha256', $ip, $rateKey);
+        $pdo = db();
+        $rate = $pdo->prepare('SELECT COUNT(*) FROM contact_enquiries WHERE ip_hash = :ip AND created_at >= (NOW() - INTERVAL 15 MINUTE)');
+        $rate->execute(['ip' => $ipHash]);
+        if ((int)$rate->fetchColumn() >= 5) json_response(['error' => 'Too many enquiries were submitted from this connection. Please wait a little and try again, or call OVC.'], 429);
+        $stmt = $pdo->prepare('INSERT INTO contact_enquiries (full_name, phone, email, service, location, description, ip_hash) VALUES (:name, :phone, :email, :service, :location, :description, :ip)');
+        $stmt->execute(['name' => $fields['fullName'], 'phone' => $fields['phone'], 'email' => $fields['email'], 'service' => $fields['service'], 'location' => $fields['location'], 'description' => $fields['description'], 'ip' => $ipHash]);
+        json_response(['ok' => true, 'id' => (int)$pdo->lastInsertId()], 201);
+    }
     if ($path === '/admin/content' && $method === 'PUT') {
         require_admin(); require_csrf();
         $body = request_json();
@@ -64,6 +98,11 @@ try {
         require_admin();
         $items = db()->query('SELECT id, filename, original_name, media_type, title, alt_text, is_published, sort_order, created_at FROM media ORDER BY sort_order, created_at DESC')->fetchAll();
         json_response(['media' => $items]);
+    }
+    if ($path === '/admin/enquiries' && $method === 'GET') {
+        require_admin();
+        $items = db()->query('SELECT id, full_name, phone, email, service, location, description, status, created_at FROM contact_enquiries ORDER BY created_at DESC LIMIT 200')->fetchAll();
+        json_response(['enquiries' => $items]);
     }
     if ($path === '/admin/media' && $method === 'POST') {
         require_admin(); require_csrf();

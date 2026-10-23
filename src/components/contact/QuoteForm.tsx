@@ -7,6 +7,7 @@ import { validateQuote } from "@/lib/quote-validation";
 import type { QuoteField, QuoteRequest } from "@/types/quote";
 
 const initialValues: QuoteRequest = { fullName: "", phone: "", email: "", service: "", location: "", description: "" };
+const API = (process.env.NEXT_PUBLIC_CMS_API_URL || "").replace(/\/$/, "");
 
 export default function QuoteForm({ initialService = "" }: { initialService?: string }) {
   const formId = useId();
@@ -14,28 +15,50 @@ export default function QuoteForm({ initialService = "" }: { initialService?: st
   const [errors, setErrors] = useState<Partial<Record<QuoteField, string>>>({});
   const [submitted, setSubmitted] = useState(false);
   const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
   function update(field: QuoteField, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
-    setSubmitted(false);
     setMessage("");
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const result = validateQuote(values);
     setErrors(result.errors);
     if (Object.keys(result.errors).length) {
-      setSubmitted(false);
       setMessage("Please correct the fields shown below.");
       const firstInvalid = Object.keys(result.errors)[0];
       document.getElementById(`${formId}-${firstInvalid}`)?.focus();
       return;
     }
-    setValues({ ...initialValues, service: initialService });
-    setSubmitted(true);
-    setMessage("Preview only: your enquiry has not been sent or stored. Contact OVC directly using the phone numbers on this page.");
+    if (!API) {
+      setMessage("The enquiry service is not configured yet. Please call one of the numbers on this page.");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`${API}/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...result.values, website: (new FormData(event.currentTarget).get("website") as string) || "" }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (payload.fields && typeof payload.fields === "object") setErrors(payload.fields as Partial<Record<QuoteField, string>>);
+        throw new Error(payload.error || "We couldn't send your enquiry. Please try again or call us.");
+      }
+      setValues({ ...initialValues, service: initialService });
+      setSubmitted(true);
+      setMessage("Your enquiry has been received. The OVC team will contact you using the details you provided.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "We couldn't send your enquiry. Please try again or call us.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   function fieldError(field: QuoteField) {
@@ -44,7 +67,7 @@ export default function QuoteForm({ initialService = "" }: { initialService?: st
   const describedBy = (field: QuoteField) => errors[field] ? `${formId}-${field}-error` : undefined;
 
   if (submitted) {
-    return <div className="form-result form-result-success" role="status" aria-live="polite"><span className="form-result-icon"><Check size={22} aria-hidden="true" /></span><p className="eyebrow">Preview enquiry</p><h3>Thanks — the preview form works.</h3><p>{message}</p><button className="button button-outline-dark" type="button" onClick={() => { setSubmitted(false); setMessage(""); }}>Send another preview enquiry</button></div>;
+    return <div className="form-result form-result-success" role="status" aria-live="polite"><span className="form-result-icon"><Check size={22} aria-hidden="true" /></span><p className="eyebrow">Enquiry received</p><h3>Thank you for getting in touch.</h3><p>{message}</p><button className="button button-outline-dark" type="button" onClick={() => { setSubmitted(false); setMessage(""); }}>Send another enquiry</button></div>;
   }
 
   return (
@@ -57,8 +80,9 @@ export default function QuoteForm({ initialService = "" }: { initialService?: st
         <div className="form-field form-field-wide"><label htmlFor={`${formId}-location`}>Project location <span aria-hidden="true">*</span></label><input id={`${formId}-location`} name="location" autoComplete="address-level2" required maxLength={160} value={values.location} onChange={(event) => update("location", event.target.value)} aria-invalid={Boolean(errors.location)} aria-describedby={describedBy("location")} />{fieldError("location")}</div>
         <div className="form-field form-field-wide"><label htmlFor={`${formId}-description`}>Project description <span aria-hidden="true">*</span></label><textarea id={`${formId}-description`} name="description" required minLength={10} maxLength={3000} rows={5} value={values.description} onChange={(event) => update("description", event.target.value)} aria-invalid={Boolean(errors.description)} aria-describedby={describedBy("description")} placeholder="Tell us about the work you have in mind." />{fieldError("description")}</div>
       </div>
+      <div className="quote-honeypot" aria-hidden="true"><label htmlFor={`${formId}-website`}>Leave this field empty<input id={`${formId}-website`} name="website" type="text" tabIndex={-1} autoComplete="off" /></label></div>
       <p className="form-required-note"><span aria-hidden="true">*</span> Required fields</p>
-      <div className="form-submit-row"><button className="button button-gold" type="submit">Submit preview enquiry <ArrowRight size={17} aria-hidden="true" /></button><p>Preview only — details are not sent or saved.</p></div>
+      <div className="form-submit-row"><button className="button button-gold" type="submit" disabled={busy}>{busy ? "Sending…" : "Send enquiry"} {!busy && <ArrowRight size={17} aria-hidden="true" />}</button><p>Your details are used to respond to your enquiry.</p></div>
       {message && <p className="form-message form-message-error" role="alert" aria-live="polite">{message}</p>}
     </form>
   );

@@ -6,6 +6,12 @@ function env_value(string $key, ?string $default = null): ?string {
     return $value === false || $value === '' ? $default : $value;
 }
 
+function text_length(string $value): int {
+    if (function_exists('mb_strlen')) return mb_strlen($value, 'UTF-8');
+    $count = preg_match_all('/./us', $value);
+    return $count === false ? strlen($value) : $count;
+}
+
 function json_response(array $data, int $status = 200): never {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');

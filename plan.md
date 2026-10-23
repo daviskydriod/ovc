@@ -7,11 +7,11 @@
 - The original OVC master logo at `public/brand/ovc-master-logo.png` is preserved unchanged.
 - The client supplied a 24-image archive. Twenty-three non-portrait assets are organized and converted to WebP under `public/projects/`; the unlabeled portrait is not published. The gallery identifies photos, renderings and drawings separately, uses no stock/generated images, and makes no unsupported project-completion claims.
 - Public page copy and portfolio image selection read PHP API section content when `NEXT_PUBLIC_CMS_API_URL` is configured, falling back to approved defaults otherwise.
-- The quote form is still preview-only and does not send or save personal details.
+- The contact form validates in the browser and PHP API, saves genuine enquiries to MySQL, and shows a received confirmation. Authenticated staff can review requests in the admin Enquiries tab.
 
 ## Admin and backend
 
-- `/admin` is a private, no-index route with responsive horizontal tabs for Home, About, Services, Projects & Images, Contact and Uploads.
+- `/admin` is a private, no-index route with responsive horizontal tabs for Home, About, Services, Projects & Images, Contact, Enquiries and Uploads.
 - Custom labeled text fields save to MySQL-backed JSON content sections; the project tab selects which supplied WebP images appear in the public gallery.
 - Image/video upload and deletion routes use the PHP 8.1+ backend, PDO/MySQL, admin sessions, CSRF tokens, MIME checks and upload limits.
 - Backend setup and deployment are documented in `backend/README.md`; the API must be hosted separately and configured in Vercel before admin edits can persist or display.

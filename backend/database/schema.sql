@@ -20,3 +20,18 @@ CREATE TABLE IF NOT EXISTS media (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_media_public_order (is_published, sort_order, created_at)
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS contact_enquiries (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(120) NOT NULL,
+  phone VARCHAR(40) NOT NULL,
+  email VARCHAR(254) NOT NULL,
+  service VARCHAR(120) NOT NULL,
+  location VARCHAR(160) NOT NULL,
+  description TEXT NOT NULL,
+  ip_hash CHAR(64) NOT NULL,
+  status ENUM('new', 'contacted', 'closed') NOT NULL DEFAULT 'new',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_enquiries_created (created_at),
+  KEY idx_enquiries_ip_created (ip_hash, created_at)
+) ENGINE=InnoDB;

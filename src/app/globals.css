@@ -500,3 +500,22 @@ body { letter-spacing: -.01em; }
   .footer-main { grid-template-columns: 1fr; }
   .footer-brand-column { grid-column: auto; }
 }
+
+
+.quote-honeypot { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; }
+.admin-inbox-panel { padding: 28px; }
+.admin-enquiry-list { display: grid; gap: 13px; }
+.admin-enquiry-card { padding: 18px; background: #fbfcfd; border: 1px solid var(--line); border-radius: 7px; }
+.admin-enquiry-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.admin-enquiry-top time { color: var(--muted); font-size: 10px; }
+.admin-enquiry-status { padding: 4px 8px; color: #704f03; background: #fff1ca; border-radius: 99px; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.admin-enquiry-status.status-contacted { color: #134b70; background: #e0f1fb; }
+.admin-enquiry-status.status-closed { color: #315947; background: #e5f3ea; }
+.admin-enquiry-card h3 { margin: 12px 0 4px; color: var(--navy); font-family: "Montserrat Variable", sans-serif; font-size: 17px; }
+.admin-enquiry-service { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; }
+.admin-enquiry-service span { color: var(--gold-deep); }
+.admin-enquiry-description { margin: 13px 0; color: var(--ink); font-size: 13px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.admin-enquiry-contacts { display: flex; flex-wrap: wrap; gap: 8px 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.admin-enquiry-contacts a { color: var(--navy); font-size: 11px; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
+.admin-inbox-empty { padding: 34px 16px; color: var(--muted); background: var(--paper); text-align: center; }
+@media (max-width: 600px) { .admin-inbox-panel { padding: 18px; } .admin-enquiry-card { padding: 14px; } .admin-enquiry-top { align-items: flex-start; flex-direction: column; gap: 7px; } .admin-enquiry-contacts { flex-direction: column; } }

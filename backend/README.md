@@ -23,6 +23,7 @@ This is a separate PHP 8.1+ backend for administering site section content and u
 | `SESSION_COOKIE_SECURE` | Production | Set `true` when served over HTTPS |
 | `SESSION_SAMESITE` | For cross-site | `Strict` by default; use `None` only for cross-site hosting, with HTTPS and secure cookies |
 | `PUBLIC_API_URL` | For public media URLs | Absolute API origin/base URL, e.g. `https://api.example.com/api` |
+| `RATE_LIMIT_HMAC_KEY` | Yes for contact form | Random secret used to create privacy-preserving IP hashes for the enquiry rate limit. Generate with `php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'` |
 | `MEDIA_STORAGE_PATH` | No | Private writable directory; defaults to `backend/storage/media` |
 | `MAX_UPLOAD_BYTES` | No | Upload cap in bytes; defaults to 104857600 (100 MiB) |
 | `API_BASE_PATH` | No | API prefix; defaults to `/api` |
@@ -35,6 +36,8 @@ Set PHP's `upload_max_filesize` and `post_max_size` to accommodate the configure
 - `GET /api/content` — all published/editable content sections as `{ "sections": { "home": {}, ... } }`.
 - `GET /api/media` — published media metadata; each item includes a media URL.
 - `GET /api/media/{id}` — streams a published image/video.
+- `POST /api/contact` — validates and stores a public quote enquiry in MySQL. Enquiries are limited to five per IP-derived key per 15 minutes; the request includes a honeypot field.
+- `GET /api/admin/enquiries` — lists the latest 200 contact enquiries; requires admin session.
 - `POST /api/admin/login` — JSON `{ "username": "...", "password": "..." }`; starts a secure HttpOnly session and returns a CSRF token.
 - `GET /api/admin/csrf` — returns a CSRF token for an authenticated session.
 - `PUT /api/admin/content` — JSON `{ "key": "home", "content": { ... } }`; requires admin session and `X-CSRF-Token` header.
@@ -43,7 +46,7 @@ Set PHP's `upload_max_filesize` and `post_max_size` to accommodate the configure
 - `DELETE /api/admin/media/{id}` — deletes record and stored file; requires session and CSRF header.
 - `POST /api/admin/logout` — destroys the admin session; requires CSRF header.
 
-For browser calls across origins, use `credentials: "include"` and set the exact front-end origin in `CORS_ALLOWED_ORIGINS`. Keep the API and front end on HTTPS. If the front end and API are on different sites, set `SESSION_SAMESITE=None` and `SESSION_COOKIE_SECURE=true`; browser third-party-cookie policies may still block cross-site sessions, so same-site hosting is recommended. Admin login has a small response delay but should additionally be protected by host-level rate limiting/WAF in production. Back up uploads before deleting content. Use strong unique admin credentials and rotate them through hosting configuration.
+For browser calls across origins, set the exact front-end origin in `CORS_ALLOWED_ORIGINS`. Keep the API and front end on HTTPS. The public enquiry endpoint does not use an admin cookie; the admin dashboard does. If the front end and API are on different sites, set `SESSION_SAMESITE=None` and `SESSION_COOKIE_SECURE=true`; browser third-party-cookie policies may still block cross-site sessions, so same-site hosting is recommended. Protect all endpoints with host-level rate limiting/WAF in production. Back up uploads and enquiry data. Use strong unique admin credentials and rotate them through hosting configuration. Establish a retention and deletion schedule for personal enquiry data appropriate to your privacy obligations; do not retain enquiries indefinitely.
 
 ## Content payload example
 
@@ -57,4 +60,4 @@ For browser calls across origins, use `credentials: "include"` and set the exact
 }
 ```
 
-The API deliberately stores flexible section JSON without inventing company details. Validate and sanitize any rich text in the consuming website; treat content fields as plain text unless a reviewed HTML-sanitization layer is added. The custom Next.js admin dashboard at `/admin` saves page copy to `home`, `about`, `services`, `projects` and `contact` sections. Its Projects & Images tab controls the static client image paths shown on the portfolio; newly uploaded API files remain in the upload library until selected through a future media-to-gallery integration. Existing WebP assets are version-controlled in `public/projects/`.
+The API deliberately stores flexible section JSON without inventing company details. Validate and sanitize any rich text in the consuming website; treat content fields as plain text unless a reviewed HTML-sanitization layer is added. The custom Next.js admin dashboard at `/admin` saves page copy to `home`, `about`, `services`, `projects` and `contact` sections, controls the client-supplied portfolio images and displays incoming enquiries in its Enquiries tab. Newly uploaded API media remains in the upload library until selected through a future media-to-gallery integration. Existing WebP assets are version-controlled in `public/projects/`. Re-import the updated SQL schema or run the `CREATE TABLE contact_enquiries` statement when upgrading an existing API database.
