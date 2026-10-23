@@ -5,7 +5,7 @@ const apiBase = (process.env.CMS_API_URL || process.env.NEXT_PUBLIC_CMS_API_URL 
 export async function getPageContent<T extends PageContent>(key: string, fallback: T): Promise<T> {
   if (!apiBase) return fallback;
   try {
-    const response = await fetch(`${apiBase}/content`, { cache: "no-store" });
+    const response = await fetch(`${apiBase}/content`, { next: { revalidate: 300 } });
     if (!response.ok) return fallback;
     const payload = await response.json() as { sections?: Record<string, unknown> };
     const incoming = payload.sections?.[key];

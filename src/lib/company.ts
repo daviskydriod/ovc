@@ -3,9 +3,9 @@ export const COMPANY = {
   shortName: "OVC",
   motto: "YOUR SATISFACTION IS OUR UTMOST PRIORITY.",
   phones: [
-    { display: "0814 2695 560", href: "tel:+2348142695560", country: "Nigeria" },
-    { display: "0916 9117 749", href: "tel:+2349169117749", country: "Nigeria" },
-    { display: "+233 25 669 6916", href: "tel:+233256696916", country: "Ghana" },
+    { display: "0814 2695 560", href: "tel:+2348142695560", whatsapp: "https://wa.me/2348142695560", country: "Nigeria" },
+    { display: "0916 9117 749", href: "tel:+2349169117749", whatsapp: "https://wa.me/2349169117749", country: "Nigeria" },
+    { display: "+233 25 669 6916", href: "tel:+233256696916", whatsapp: "https://wa.me/233256696916", country: "Ghana" },
   ],
 } as const;
 

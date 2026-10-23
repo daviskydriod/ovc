@@ -14,13 +14,13 @@ export function pageMetadata(title: string, description: string, path: string): 
       title,
       description,
       ...(canonical ? { url: canonical } : {}),
-      ...(origin ? { images: [{ url: new URL("/brand/ovc-master-logo.png", origin).toString(), width: 1959, height: 803, alt: `${COMPANY.name} original logo` }] } : {}),
+      ...(origin ? { images: [{ url: new URL("/brand/ovc-primary-transparent.png", origin).toString(), width: 636, height: 266, alt: `${COMPANY.name} logo` }] } : {}),
     },
     twitter: {
       card: origin ? "summary_large_image" : "summary",
       title,
       description,
-      ...(origin ? { images: [new URL("/brand/ovc-master-logo.png", origin).toString()] } : {}),
+      ...(origin ? { images: [new URL("/brand/ovc-primary-transparent.png", origin).toString()] } : {}),
     },
   };
 }
