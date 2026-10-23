@@ -1,0 +1,7 @@
+# Defense in depth: the API document root should be the public/ directory,
+# but deny environment files if the backend root is ever exposed by mistake.
+Options -Indexes
+
+<FilesMatch "^\.env(?:\..*)?$">
+    Require all denied
+</FilesMatch>

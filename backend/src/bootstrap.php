@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
-/** Read a configuration value. Process environment takes precedence over private cPanel config. */
+/** Read config in order: process environment, private config/local.php, then backend/.env. */
 function env_value(string $key, ?string $default = null): ?string {
     $value = getenv($key);
     if ($value !== false && $value !== '') return $value;
     $local = $GLOBALS['OVC_LOCAL_CONFIG'] ?? [];
     if (is_array($local) && isset($local[$key]) && is_scalar($local[$key]) && (string)$local[$key] !== '') return (string)$local[$key];
+    $dotenv = $GLOBALS['OVC_DOTENV_CONFIG'] ?? [];
+    if (is_array($dotenv) && isset($dotenv[$key]) && is_scalar($dotenv[$key]) && (string)$dotenv[$key] !== '') return (string)$dotenv[$key];
     return $default;
 }
 
@@ -15,6 +17,30 @@ if (is_file($localConfigFile)) {
     $localConfig = require $localConfigFile;
     $GLOBALS['OVC_LOCAL_CONFIG'] = is_array($localConfig) ? $localConfig : [];
 }
+
+// Shared-hosting fallback: keep backend/.env beside public/ and outside the web document root.
+$dotenvFile = dirname(__DIR__) . '/.env';
+$dotenvConfig = [];
+if (is_readable($dotenvFile)) {
+    $dotenvLines = file($dotenvFile, FILE_IGNORE_NEW_LINES);
+    foreach ($dotenvLines === false ? [] : $dotenvLines as $dotenvLine) {
+        $dotenvLine = trim($dotenvLine);
+        if ($dotenvLine === '' || $dotenvLine[0] === '#') continue;
+        if (str_starts_with($dotenvLine, 'export ')) $dotenvLine = trim(substr($dotenvLine, 7));
+        if (!preg_match('/^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/', $dotenvLine, $match)) continue;
+        $dotenvValue = trim($match[2]);
+        $valueLength = strlen($dotenvValue);
+        if ($valueLength >= 2 && (($dotenvValue[0] === '"' && $dotenvValue[$valueLength - 1] === '"') || ($dotenvValue[0] === "'" && $dotenvValue[$valueLength - 1] === "'"))) {
+            $quote = $dotenvValue[0];
+            $dotenvValue = substr($dotenvValue, 1, -1);
+            if ($quote === '"') $dotenvValue = stripcslashes($dotenvValue);
+        } else {
+            $dotenvValue = preg_replace('/\s+#.*$/', '', $dotenvValue) ?? $dotenvValue;
+        }
+        $dotenvConfig[$match[1]] = $dotenvValue;
+    }
+}
+$GLOBALS['OVC_DOTENV_CONFIG'] = $dotenvConfig;
 
 /** UTF-8 character count without requiring mbstring. */
 function text_length(string $value): int {

@@ -2,7 +2,7 @@
 
 The backend is a separately hosted PHP 8.1+ JSON API for the OVC Next.js site. It provides public content, portfolio project and media reads, quote-enquiry submission, and authenticated administration for page content, uploaded media, project records and enquiries. MySQL stores structured metadata and content; image/video binaries are stored outside the public web root.
 
-For machine-readable contracts see [`openapi.yaml`](openapi.yaml). The implementation is in `public/index.php`, shared helpers and security configuration are in `src/bootstrap.php`, the fresh-install schema is `database/schema.sql`, and the one-time upgrade for the earlier schema is `database/migrations/002_production_ready_api.sql`.
+For machine-readable endpoint documentation see [`openapi.yaml`](openapi.yaml). The implementation is in `public/index.php`, shared helpers and security configuration are in `src/bootstrap.php`, and the single database import is `database/schema.sql`.
 
 For a panel-oriented walkthrough, use [`CPANEL-DEPLOYMENT.md`](CPANEL-DEPLOYMENT.md).
 
@@ -11,40 +11,38 @@ For a panel-oriented walkthrough, use [`CPANEL-DEPLOYMENT.md`](CPANEL-DEPLOYMENT
 - PHP 8.1 or later with `pdo_mysql`, `fileinfo` and PHP sessions. `mbstring` is recommended but the API includes UTF-8 helper fallbacks.
 - MySQL 8+ or a compatible MariaDB version with InnoDB and JSON support.
 - HTTPS for the public website and API.
-- Configure the PHP document root to `backend/public/`; never expose `backend/src`, database scripts, `.env` files or media storage as static web content.
+- Route `https://ovcconstructions.com/api/*` to the PHP `public/` directory, preserving the `/api` prefix for the router. Keep `src`, database scripts, `.env` files and media storage outside the web document root. The backend-root `.htaccess` denies requests for `.env*` files as defense in depth.
 - Apache can use the included `public/.htaccess`. For Nginx, route missing paths to `index.php` and preserve the query string.
 - Set PHP `upload_max_filesize` and `post_max_size` to values at least as large as `MAX_UPLOAD_BYTES`; use host/WAF request limits too.
 
-### Fresh database installation
+### Single-file database import
 
-Use the existing database if you already have one—do not create another unnecessarily. Create a dedicated least-privilege MySQL user only if needed, grant the app user access to the selected database, then select that database before importing the schema. In a command-line install where the database is literally named `ovc_site`:
+Use your existing MySQL database and its existing connection credentials; do not create a second database. Back up the database first. In phpMyAdmin, select the existing OVC database and import `database/schema.sql` once. The file creates the complete current schema and conditionally adds the missing columns and indexes from the earlier OVC schema, so there is one import for both a fresh database and the previous OVC installation. It does not create or select a database, and it does not create or require an application `users` table. Do not run separate migration files.
+
+For command-line import, replace the placeholders with the exact cPanel-prefixed database and the MySQL account you already use for this application:
 
 ```sh
-mysql -u root -p --database=ovc_site < backend/database/schema.sql
-mysql -u root -p -e "CREATE USER 'ovc_app'@'localhost' IDENTIFIED BY 'REPLACE_WITH_LONG_RANDOM_PASSWORD';"
-mysql -u root -p -e "GRANT SELECT, INSERT, UPDATE, DELETE ON ovc_site.* TO 'ovc_app'@'localhost'; FLUSH PRIVILEGES;"
+mysql -u YOUR_DB_USER -p --database=YOUR_EXISTING_DB < backend/database/schema.sql
 ```
 
-Use the exact database name displayed by cPanel (often prefixed, for example `account_ovc_site`) in `DB_NAME`. When using phpMyAdmin, first click the target database and then import `database/schema.sql`; it intentionally does not issue `CREATE DATABASE` or `USE` so it works with cPanel prefixes. Do not use the database administrator account in the application.
-
-### Existing installation upgrade
-
-Back up the database first. Select the existing OVC database in phpMyAdmin (or pass its name to the MySQL command) and apply `backend/database/migrations/002_production_ready_api.sql` **once** to databases created by the original OVC schema. Then apply `backend/database/migrations/003_projects.sql` **once** to add project records. Do not run these migrations on a fresh database already created from the current `schema.sql`; that schema already includes every table and records version 3.
+`DB_USER` and `DB_PASSWORD` are only the MySQL connection account PHP uses to access the existing database; they are not website user records. If the current database account lacks the `CREATE`/`ALTER` permissions needed for import, ask the database host to grant those permissions temporarily or use the account they provide for database imports. The running API needs only the table privileges listed by your host.
 
 ### cPanel file upload
 
-Download the `ovc-cpanel-api.zip` artifact supplied with this change. In cPanel File Manager, upload and extract it into a private directory such as `/home/ACCOUNT/ovc-api/`, not directly into `public_html`. Configure an API subdomain (recommended: `api.ovcconstructions.com`) with document root `/home/ACCOUNT/ovc-api/public`; the `src`, `database` and storage folders are siblings outside the public document root. If the hosting plan cannot set that document root, ask the host to map the subdomain to the `public` directory—do not make `src` or `database` publicly accessible. Import `database/schema.sql` for a fresh database, or back up and apply the numbered migrations in order for an existing installation. Set environment variables in cPanel's PHP application/environment settings, or copy `config/local.php.example` to `config/local.php` and edit that file outside the public root if cPanel does not expose environment settings. Ensure private media storage is writable by the PHP account. Finally test `https://api.example.com/api/health` and sign in to the admin dashboard from the deployed site.
+Download the `ovc-cpanel-api.zip` artifact supplied with this change. In cPanel File Manager, upload and extract it into a private directory such as `/home/ACCOUNT/ovc-api/`, not directly into `public_html`. The configured public API base is `https://ovcconstructions.com/api`; the hosting arrangement must route requests under `/api/*` on the primary domain to this backend's `public/` directory while keeping `src`, `database`, configuration and storage outside the web root. Preserve the `/api` prefix. If the domain's frontend host currently handles all paths, configure its routing/reverse proxy so `/api/*` reaches the PHP API; the `.env` setting alone does not create that route. Copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` and edit the private file; the PHP bootstrap reads it automatically. Alternatively copy `config/local.php.example` to `config/local.php`. Back up the existing database, then import `database/schema.sql` exactly once. Ensure private media storage is writable by the PHP account. Finally test `https://ovcconstructions.com/api/health` and sign in to the admin dashboard from the deployed site.
 
 ### Environment configuration
 
-Set these values in the PHP host's secret/environment manager, not in a committed file. `backend/.env.example` is a variable reference only; the PHP application reads process variables or a private `config/local.php` array (copied from the example), not a `.env` file. Never commit `config/local.php`.
+The shared-hosting loader reads `backend/.env`, located beside `public/` and outside the API document root. Copy `backend/.env.example` to `backend/.env` and edit the copy; the real `.env` is ignored by Git, and the included backend-root `.htaccess` denies web requests for `.env*`. The application also supports process variables and `config/local.php`. Precedence is process environment, then `config/local.php`, then `.env`. The simple parser accepts `KEY=value`, optional `export ` prefixes, comments, and single- or double-quoted values; it does not expand variables. Never commit real credentials.
+
+Administrator authentication is configuration-only: the API compares login attempts with the single `ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH` values and stores no administrator accounts in MySQL. There is no application `users` table, user-management endpoint, or roles system in this API. `DB_USER` is unrelated; it is the MySQL connection account, not a website user table.
 
 | Variable | Required | Purpose |
 |---|---|---|
 | `DB_HOST` | Yes | MySQL host or socket host; default `127.0.0.1`. |
 | `DB_NAME` | Yes | Exact database name created/selected in cPanel or MySQL, including any hosting-account prefix. |
-| `DB_USER` | Yes | Least-privilege app account. |
-| `DB_PASSWORD` | Yes | Password for the app account. |
+| `DB_USER` | Yes | MySQL account PHP uses to connect to the existing database; not an application users table. |
+| `DB_PASSWORD` | Yes | Password for that MySQL connection account. |
 | `ADMIN_USERNAME` | Yes | Single administrator username. |
 | `ADMIN_PASSWORD_HASH` | Yes | Password hash generated with `php -r 'echo password_hash("a-long-unique-password", PASSWORD_DEFAULT), PHP_EOL;'`. Never store the plaintext password here. |
 | `RATE_LIMIT_HMAC_KEY` | Yes | At least 32 random bytes used to hash IP addresses for abuse throttling. Generate with `php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'`. |
@@ -52,11 +50,11 @@ Set these values in the PHP host's secret/environment manager, not in a committe
 | `SESSION_COOKIE_SECURE` | Production | Set to `true` for HTTPS. |
 | `SESSION_SAMESITE` | Usually | `Strict` by default. Cross-site deployments may require `None` plus `SESSION_COOKIE_SECURE=true`; browser third-party-cookie policies can still block the cookie. Prefer same-site deployment. |
 | `API_BASE_PATH` | Optional | URL prefix stripped by the router; default `/api`. Set `/` only when the API is mounted at the origin root. |
-| `PUBLIC_API_URL` | For media links | Public API base URL ending in the configured API prefix, e.g. `https://api.example.com/api`. |
+| `PUBLIC_API_URL` | For media links | Public API base URL ending in the configured API prefix; for OVC use `https://ovcconstructions.com/api`. |
 | `MEDIA_STORAGE_PATH` | Optional | Absolute writable private directory; default `backend/storage/media`. Keep it outside the document root and back it up. |
 | `MAX_UPLOAD_BYTES` | Optional | Per-file byte limit; default `104857600` (100 MiB). |
 
-In Vercel configure `NEXT_PUBLIC_CMS_API_URL` as the API base URL including `/api`. Allow that exact frontend origin in `CORS_ALLOWED_ORIGINS`. For cross-origin admin fetches the browser must use `credentials: "include"`; the site already does this. After changing secrets, restart PHP workers and verify `GET /api/health`.
+In the Next.js host configure `NEXT_PUBLIC_CMS_API_URL=https://ovcconstructions.com/api`. Allow the exact frontend origin in `CORS_ALLOWED_ORIGINS`. For cross-origin admin fetches the browser must use `credentials: "include"`; the site already does this. After changing secrets, restart PHP workers and verify `GET https://ovcconstructions.com/api/health`.
 
 ## 2. Endpoint conventions
 

@@ -100,6 +100,7 @@ function handle_contact(): never {
     json_response(['ok' => true, 'id' => (int)$pdo->lastInsertId(), 'message' => 'Enquiry received.'], 201);
 }
 
+/** Authenticate the single configured administrator; deliberately no users-table lookup or database query. */
 function handle_login(): never {
     $body = request_json(4096);
     $username = env_value('ADMIN_USERNAME');

@@ -3,6 +3,8 @@
  * cPanel shared-hosting configuration template.
  * Copy to config/local.php and replace every placeholder. Never commit local.php.
  * Keep the backend root (and this file) outside the configured public document root.
+ * Admin credentials are read from this private config; no application users table is used.
+ * DB_USER below is the MySQL connection account, not a website user record.
  */
 return [
     'DB_HOST' => 'localhost',
@@ -19,7 +21,7 @@ return [
     // Use None only when the frontend and API are cross-site, with Secure=true.
     'SESSION_SAMESITE' => 'Lax',
     'API_BASE_PATH' => '/api',
-    'PUBLIC_API_URL' => 'https://api.ovcconstructions.com/api',
+    'PUBLIC_API_URL' => 'https://ovcconstructions.com/api',
     'MEDIA_STORAGE_PATH' => '/home/cpaneluser/private/ovc-media',
     'MAX_UPLOAD_BYTES' => '104857600',
 ];
