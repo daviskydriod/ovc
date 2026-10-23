@@ -5,7 +5,7 @@ This guide accompanies `ovc-cpanel-api.zip`. It assumes an existing Next.js fron
 ## Before upload
 
 1. In cPanel → **MySQL Databases**, use your existing database—do not create a second one just for this setup. Use its exact prefixed database name and the MySQL connection account you already use for the application. The PHP API has no application `users` table; `DB_USER` is only the MySQL connection login. The account doing the import needs `CREATE`/`ALTER` permissions.
-2. The configured API base is `https://ovcconstructions.com/api`. Make sure the primary domain routes requests under `/api/*` to the extracted archive's `public/` directory (for example `/home/ACCOUNT/ovc-api/public`) while keeping the `ovc-api/` parent private. Preserve the `/api` request path for the PHP router, and do not substitute a separate `api.` subdomain. Issue/enable TLS before using admin login.
+2. Create `api.ovcconstructions.com` and set its document root to the extracted archive's `public/` directory (for example `/home/ACCOUNT/ovc-api/public`). Keep the `ovc-api/` parent private, preserve the `/api` path for the PHP router, and issue/enable TLS before using admin login.
 3. Confirm the hosting account supports PHP 8.1+, PDO MySQL (`pdo_mysql`), fileinfo, PHP sessions, Apache rewrite (`mod_rewrite`) and writable private storage.
 
 ## Upload and extract
@@ -20,34 +20,35 @@ This guide accompanies `ovc-cpanel-api.zip`. It assumes an existing Next.js fron
 ├── .env.example           ← copy to .env; keep both outside public/
 ├── config/local.php.example
 ├── database/schema.sql     ← one complete database import
-├── public/index.php       ← target for primary-domain /api/* requests
+├── database/project-import-template.sql ← add approved projects and GitHub image links
+├── public/index.php       ← API subdomain document root
 ├── public/.htaccess
 ├── src/bootstrap.php
 └── storage/media/.htaccess
 ```
 
-4. In File Manager, copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` (the same directory as `public/`, not inside it) and edit the copy with your private values. The PHP bootstrap loads this file automatically on shared hosting. The included root `.htaccess` also denies web requests for `.env` files as defense in depth; keep the API path routed to `public/` while the parent remains private. As an alternative, use `config/local.php.example` copied to `config/local.php`, also outside the web root. Real `.env` and `config/local.php` files are excluded from Git; never put real credentials in `public/` or commit them.
-5. Generate unique strong values for `DB_PASSWORD`, `ADMIN_USERNAME`, the admin password (store only its `password_hash` output), and `RATE_LIMIT_HMAC_KEY` (at least 32 random bytes). Set `CORS_ALLOWED_ORIGINS` to exact origins, e.g. `https://ovcconstructions.com,https://www.ovcconstructions.com`; set `SESSION_COOKIE_SECURE=true`; use `SESSION_SAMESITE=Lax` for same-site requests. Set `PUBLIC_API_URL=https://ovcconstructions.com/api` and the cPanel-prefixed `DB_NAME` and `DB_USER`.
+4. In File Manager, copy `.env.example` to `.env` in `/home/ACCOUNT/ovc-api/` (the same directory as `public/`, not inside it) and edit the copy with your private values. The PHP bootstrap loads this file automatically on shared hosting. The included root `.htaccess` also denies web requests for `.env` files as defense in depth; keep the API subdomain document root pointed to `public/` while the parent remains private. As an alternative, use `config/local.php.example` copied to `config/local.php`, also outside the web root. Real `.env` and `config/local.php` files are excluded from Git; never put real credentials in `public/` or commit them.
+5. Generate unique strong values for `DB_PASSWORD`, `ADMIN_USERNAME`, the admin password (store only its `password_hash` output), and `RATE_LIMIT_HMAC_KEY` (at least 32 random bytes). Set `CORS_ALLOWED_ORIGINS` to exact origins, e.g. `https://ovc-lime.vercel.app,https://ovcconstructions.com,https://www.ovcconstructions.com`; set `SESSION_COOKIE_SECURE=true`; use `SESSION_SAMESITE=Lax` for same-site requests. Set `PUBLIC_API_URL=https://api.ovcconstructions.com/api` and the cPanel-prefixed `DB_NAME` and `DB_USER`.
 6. Set `MEDIA_STORAGE_PATH` to a writable private absolute path outside the document root, e.g. `/home/ACCOUNT/private/ovc-media`. Create the directory and grant the PHP account write access. Keep the default upload cap and set PHP `upload_max_filesize`/`post_max_size` to at least that value.
 
 ## Import the database
 
-In cPanel → **phpMyAdmin**, back up your existing database, click its name, then choose **Import** and import `database/schema.sql` once. This single file creates the complete current OVC schema and conditionally applies the missing fields/indexes from the earlier OVC schema. It does not create/select a database or create a website `users` table. Do not run separate migrations. If your database has a custom, non-OVC schema, do not import blindly—compare its tables/columns first and adapt safely.
+In cPanel → **phpMyAdmin**, back up your existing database, click its name, then choose **Import** and import `database/schema.sql`. This idempotent file creates the complete current OVC schema and adds `projects.cover_url` to an existing OVC database; safely re-import it after updating the API. It does not create/select a database or create a website `users` table. If your database has a custom, non-OVC schema, do not import blindly—compare its tables/columns first and adapt safely. For each project, edit `database/project-import-template.sql` with approved project details and a GitHub raw image URL, then import that completed SQL file separately.
 
 ## Configure the frontend
 
 Set this build/runtime variable on the Next.js host (Vercel or the deployment provider):
 
 ```text
-NEXT_PUBLIC_CMS_API_URL=https://ovcconstructions.com/api
+NEXT_PUBLIC_CMS_API_URL=https://api.ovcconstructions.com/api
 NEXT_PUBLIC_SITE_URL=https://ovcconstructions.com
 ```
 
-Redeploy the frontend after setting variables. The PHP API allows public GET routes without admin credentials. Admin browser requests use the session cookie with credentials and a CSRF header; allow the exact frontend origin in the API's CORS list. If the frontend and API share the primary domain, `SameSite=Lax` is normally appropriate; verify the host routes `/api/*` to PHP rather than the Next.js app.
+Redeploy the frontend after setting variables. The PHP API allows public GET routes without admin credentials. Admin browser requests use the session cookie with credentials and a CSRF header; allow the exact frontend origin in the API's CORS list. `SameSite=Lax` is normally appropriate for this same-site subdomain setup. Verify the API subdomain serves the backend and test its health endpoint.
 
 ## Verify staging before launch
 
-1. Open `https://ovcconstructions.com/api/health`. Expect HTTP 200 with `checks.php`, `checks.database`, `checks.schema` and `checks.ready` all true. A 503 means check PHP error logs, DB credentials and whether the one-time schema import completed.
+1. Open `https://api.ovcconstructions.com/api/health`. Expect HTTP 200 with `checks.php`, `checks.database`, `checks.schema` and `checks.ready` all true. A 503 means check PHP error logs, DB credentials and whether the one-time schema import completed.
 2. Open `/admin`, sign in with the configured account, and confirm page content, project records, uploads and enquiries load.
 3. Create a project as a draft; verify it is not public. Publish it; verify it appears at `/projects`, its `/projects/{slug}` detail page renders, and its URL appears in `/sitemap.xml` after the five-minute revalidation window.
 4. Submit a real test enquiry in staging and verify it appears in the admin inbox. Then remove the test record and ensure test personal data is not retained.

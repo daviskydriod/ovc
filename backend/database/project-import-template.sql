@@ -1,0 +1,45 @@
+-- OVC project import template for phpMyAdmin.
+-- First choose a title, factual description, category, slug and image for each project.
+-- Replace every REPLACE_ME value before uncommenting/running the INSERT.
+-- New records default to draft. Change status to 'published' only after review.
+-- This uses the public raw image files in daviskydriod/ovc main branch.
+-- Import backend/database/schema.sql first; it adds projects.cover_url safely to existing databases.
+--
+-- Example (remove the leading -- from each INSERT line after replacing placeholders):
+-- INSERT INTO projects (slug, title, summary, description, category, cover_media_id, cover_url, status, sort_order)
+-- VALUES (
+--   'REPLACE_ME_unique-slug',
+--   'REPLACE_ME approved project title',
+--   'REPLACE_ME short factual summary',
+--   'REPLACE_ME approved project description',
+--   'REPLACE_ME category',
+--   NULL,
+--   'https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-building-construction-photo.webp',
+--   'draft',
+--   0
+-- );
+--
+-- Available client-provided image URLs (copy one URL into cover_url):
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-building-construction-photo.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-exterior-photo-01.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-exterior-render-01.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-exterior-render-02.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-exterior-render-03.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-exterior-render-04.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-exterior-render-05.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-facade-detail-render.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-floor-plan-01.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-floor-plan-02.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-front-elevation.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-ground-floor-plan.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-left-elevation.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-masonry-construction-photo.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-railing-detail-photo.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-rear-elevation.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-right-elevation.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-tower-exterior-render.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-window-detail-photo.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-window-render-01.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-window-render-02.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-window-render-03.webp
+-- https://raw.githubusercontent.com/daviskydriod/ovc/main/public/projects/client-window-render-04.webp

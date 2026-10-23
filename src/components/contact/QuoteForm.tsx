@@ -7,7 +7,7 @@ import { validateQuote } from "@/lib/quote-validation";
 import type { QuoteField, QuoteRequest } from "@/types/quote";
 
 const initialValues: QuoteRequest = { fullName: "", phone: "", email: "", service: "", location: "", description: "" };
-const API = (process.env.NEXT_PUBLIC_CMS_API_URL || "https://ovcconstructions.com/api").replace(/\/$/, "");
+const API = (process.env.NEXT_PUBLIC_CMS_API_URL || "https://api.ovcconstructions.com/api").replace(/\/$/, "");
 
 export default function QuoteForm({ initialService = "" }: { initialService?: string }) {
   const formId = useId();
