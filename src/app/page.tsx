@@ -28,16 +28,16 @@ export default async function HomePage() {
   ];
   return (
     <main id="main-content">
-      <section className="hero">
+      <section className="hero hero-modern">
         <div className="hero-grid shell">
           <div className="hero-copy">
-            <p className="eyebrow">{content.heroEyebrow}</p>
+            <p className="eyebrow"><span className="hero-eyebrow-mark" />{content.heroEyebrow}</p>
             <h1>{content.heroTitle}<span>{content.heroHighlight}</span></h1>
             <p className="hero-description">{content.heroDescription}</p>
-            <div className="hero-actions"><Link className="button button-gold" href="/contact#quote">Request a Quote <ArrowRight size={17} aria-hidden="true" /></Link><Link className="button button-outline-dark" href="/projects">View Our Projects <ArrowUpRight size={16} aria-hidden="true" /></Link></div>
-            <p className="hero-annotation">A practical approach to every project conversation</p>
+            <div className="hero-actions"><Link className="button button-gold" href="/contact#quote">Discuss your project <ArrowRight size={17} aria-hidden="true" /></Link><Link className="hero-text-link" href="/projects">Explore our work <ArrowUpRight size={16} aria-hidden="true" /></Link></div>
+            <div className="hero-proof"><span className="hero-proof-line" /><p>Construction <span>·</span> Finishing <span>·</span> Maintenance</p></div>
           </div>
-          <div className="hero-media"><ClientImage className="hero-photo" src={featuredProjectImage.src} alt={featuredProjectImage.alt} priority sizes="(max-width: 768px) 100vw, 52vw" /><div className="hero-media-note"><span>Client-supplied image</span>Building image provided for the OVC website.</div></div>
+          <div className="hero-media"><ClientImage className="hero-photo" src={featuredProjectImage.src} alt={featuredProjectImage.alt} priority sizes="(max-width: 768px) 100vw, 55vw" /><div className="hero-image-caption"><span className="hero-image-index">01</span><div><strong>Work in progress</strong><small>Client-supplied construction photo</small></div><ArrowUpRight size={19} aria-hidden="true" /></div><span className="hero-image-tag">OVC <span>/</span> Built with care</span></div>
         </div>
       </section>
 
