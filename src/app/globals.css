@@ -537,3 +537,54 @@ body { letter-spacing: -.01em; }
 .footer-logo { width: 100%; height: 100%; max-height: 62px; object-fit: contain; }
 .service-icon img { width: 29px; height: 29px; object-fit: contain; }
 @media (max-width: 600px) { .footer-logo-link { width: 112px; height: 64px; } .footer-logo { max-height: 58px; } }
+
+
+/* Focused admin sign-in; public-site chrome is intentionally absent on /admin. */
+body:has(.admin-page) .site-header,
+body:has(.admin-page) .site-footer { display: none; }
+.admin-page-unauthenticated { min-height: 100svh; display: flex; align-items: stretch; padding: 0; background: #f1f4f8; }
+.admin-page-unauthenticated .admin-shell { width: 100%; max-width: none; min-height: 100svh; display: grid; place-items: center; margin: 0; padding: 32px; }
+.admin-page-unauthenticated .admin-login-split { width: min(1120px, 100%); max-width: none; min-height: min(720px, calc(100svh - 64px)); display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr); gap: 0; padding: 0; overflow: hidden; background: #fff; border: 1px solid #e0e5ed; border-radius: 16px; box-shadow: 0 24px 70px rgb(16 38 74 / 12%); }
+.admin-login-photo { position: relative; min-height: 560px; overflow: hidden; background: #24344b; }
+.admin-login-photo > img { object-fit: cover; object-position: center; }
+.admin-login-photo-overlay { position: absolute; z-index: 1; inset: 0; display: flex; flex-direction: column; align-items: flex-start; padding: clamp(26px, 4vw, 48px); color: #fff; background: linear-gradient(180deg, rgb(7 21 43 / 10%) 0%, rgb(7 21 43 / 4%) 36%, rgb(7 21 43 / 86%) 100%); }
+.admin-login-photo-logo { width: 138px; height: auto; object-fit: contain; }
+.admin-login-photo-copy { max-width: 450px; margin-top: auto; }
+.admin-login-photo-copy .eyebrow { margin-bottom: 12px; color: #f1c34d; }
+.admin-login-photo-copy h1 { margin: 0; color: #fff; font-family: "Montserrat Variable", Montserrat, sans-serif; font-size: clamp(34px, 4.3vw, 53px); font-weight: 800; letter-spacing: -.045em; line-height: 1.08; }
+.admin-login-photo-copy > p:last-child { max-width: 390px; margin: 17px 0 0; color: #e2e8f1; font-size: 14px; line-height: 1.75; }
+.admin-login-photo-caption { margin: 26px 0 0; color: #d0d9e6; font-size: 10px; letter-spacing: .06em; }
+.admin-login-panel { display: flex; flex-direction: column; justify-content: center; padding: clamp(32px, 5vw, 64px); background: #fff; }
+.admin-login-brand { width: 184px; height: auto; margin-bottom: 30px; object-fit: contain; }
+.admin-login-panel > .eyebrow { margin-bottom: 9px; }
+.admin-login-panel h2 { margin: 0; color: var(--navy); font-family: "Montserrat Variable", Montserrat, sans-serif; font-size: clamp(28px, 3vw, 36px); font-weight: 800; letter-spacing: -.04em; line-height: 1.15; }
+.admin-login-panel > p:not(.eyebrow) { margin: 12px 0 22px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.admin-login-panel label { display: grid; gap: 7px; margin: 14px 0; color: var(--navy); font-size: 12px; font-weight: 750; }
+.admin-login-panel input { width: 100%; min-height: 49px; padding: 11px 13px; color: var(--ink); background: #fff; border: 1px solid #cfd7e2; border-radius: 5px; font-size: 14px; }
+.admin-login-panel input:focus { border-color: var(--navy); outline: 3px solid rgb(217 166 46 / 24%); outline-offset: 1px; }
+.admin-login-panel .button { width: 100%; min-height: 50px; margin-top: 10px; border-radius: 5px; }
+.admin-login-notice { margin: 4px 0 14px !important; padding: 11px 13px; color: #82272a !important; background: #fff3f2; border-left: 3px solid #ba4d4d; font-size: 12px !important; }
+.admin-login-panel .admin-login-footnote { margin: 24px 0 0 !important; padding-top: 16px; border-top: 1px solid #e8ebf0; color: #6e7887; font-size: 11px !important; }
+@media (max-width: 760px) {
+  .admin-page-unauthenticated .admin-shell { padding: 20px; }
+  .admin-page-unauthenticated .admin-login-split { width: min(560px, 100%); min-height: auto; grid-template-columns: 1fr; }
+  .admin-login-photo { min-height: 275px; }
+  .admin-login-photo-overlay { padding: 24px 28px; }
+  .admin-login-photo-logo { width: 112px; }
+  .admin-login-photo-copy { max-width: 360px; margin-top: auto; }
+  .admin-login-photo-copy h1 { max-width: 360px; font-size: clamp(28px, 6vw, 38px); }
+  .admin-login-photo-copy > p:last-child { display: none; }
+  .admin-login-photo-caption { margin-top: 15px; }
+  .admin-login-panel { padding: 30px clamp(24px, 7vw, 42px) 34px; }
+  .admin-login-brand { width: 155px; margin-bottom: 22px; }
+}
+@media (max-width: 430px) {
+  .admin-page-unauthenticated .admin-shell { padding: 0; }
+  .admin-page-unauthenticated .admin-login-split { width: 100%; min-height: 100svh; border: 0; border-radius: 0; box-shadow: none; }
+  .admin-login-photo { min-height: 235px; }
+  .admin-login-photo-overlay { padding: 20px 22px; }
+  .admin-login-photo-logo { width: 96px; }
+  .admin-login-photo-copy h1 { font-size: 29px; }
+  .admin-login-panel { padding: 26px 23px 30px; }
+  .admin-login-brand { width: 142px; }
+}
