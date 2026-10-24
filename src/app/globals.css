@@ -764,3 +764,10 @@ body:has(.admin-page) .site-footer { display: none; }
   .admin-modal-actions { position: sticky; bottom: -22px; padding: 12px 0 0; background: #fff; }
   .admin-modal-actions .button { flex: 1; }
 }
+
+/* Keep decorative edges and long user/API content from widening any page on mobile. */
+html, body { max-width: 100%; overflow-x: hidden; }
+main, header, footer, section, .shell, .admin-shell { min-width: 0; max-width: 100%; }
+img, svg, video, canvas { max-width: 100%; }
+.header-inner > *, .hero-grid > *, .project-feature > *, .about-split > *, .page-hero-grid > *, .contact-grid > *, .cta-panel > *, .footer-main > *, .footer-bottom > *, .admin-dashboard-heading > *, .admin-project-toolbar > * { min-width: 0; }
+h1, h2, h3, h4, p, a, li, code { overflow-wrap: anywhere; }
