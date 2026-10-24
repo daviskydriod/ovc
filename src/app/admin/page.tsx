@@ -50,7 +50,7 @@ export default function AdminDashboard() {
         headers: { ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }), ...(init.headers || {}) },
       });
     } catch {
-      throw new Error("The browser could not reach the PHP API. Check the API URL and allow this site's exact origin in CORS_ALLOWED_ORIGINS.");
+      throw new Error("Please refresh the page and try again.");
     }
     const type = response.headers.get("content-type") || "";
     const result = type.includes("application/json") ? await response.json() : null;
@@ -128,8 +128,8 @@ export default function AdminDashboard() {
     try {
       await refresh();
       setNotice("You’re signed in. Choose Projects or Enquiries to continue.");
-    } catch (error) {
-      setNotice(`You’re signed in, but some dashboard data did not load. ${messageFrom(error)}`);
+    } catch {
+      setNotice("You’re signed in, but some dashboard data did not load. Please refresh the page and try again.");
     }
   }
 
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
       setProjectDraft({ ...emptyProject });
       setNotice(wasEditing ? "Project updated." : "Project added.");
       try { await refresh(); }
-      catch (error) { setNotice(`Project saved, but the list could not refresh. ${messageFrom(error)}`); }
+      catch { setNotice("Project saved. Please refresh the page to see the latest list."); }
     } catch (error) {
       setModalNotice(messageFrom(error));
     } finally {
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
       await request(`/admin/projects/${project.id}`, { method: "DELETE", headers: { "X-CSRF-Token": csrf } });
       setProjectRecords((current) => current.filter((item) => item.id !== project.id));
       setNotice("Project deleted.");
-      try { await refresh(); } catch (error) { setNotice(`Project deleted, but the list could not refresh. ${messageFrom(error)}`); }
+      try { await refresh(); } catch { setNotice("Project deleted. Please refresh the page to see the latest list."); }
     } catch (error) {
       setNotice(messageFrom(error));
     } finally {
@@ -256,7 +256,7 @@ export default function AdminDashboard() {
     setBusy(true);
     setNotice("");
     try { await refresh(); setNotice("Dashboard refreshed."); }
-    catch (error) { setNotice(messageFrom(error)); }
+    catch { setNotice("The dashboard could not be refreshed. Please refresh the page and try again."); }
     finally { setBusy(false); }
   }
 

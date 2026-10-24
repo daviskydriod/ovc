@@ -43,7 +43,7 @@ export default function QuoteForm({ initialService = "" }: { initialService?: st
       return;
     }
     if (!API) {
-      setMessage("The enquiry service is not configured yet. Please call one of the numbers on this page.");
+      setMessage("Online enquiries are temporarily unavailable. Please call one of the numbers on this page.");
       return;
     }
 

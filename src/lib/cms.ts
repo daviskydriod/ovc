@@ -1,6 +1,6 @@
 export type PageContent = Record<string, string | string[] | number[]>;
 
-const apiBase = (process.env.CMS_API_URL || process.env.NEXT_PUBLIC_CMS_API_URL || "https://api.ovcconstructions.com/api").replace(/\/$/, "");
+const apiBase = (process.env.NEXT_PUBLIC_CMS_API_URL || "https://api.ovcconstructions.com/api").replace(/\/$/, "");
 
 export async function getPageContent<T extends PageContent>(key: string, fallback: T): Promise<T> {
   if (!apiBase) return fallback;

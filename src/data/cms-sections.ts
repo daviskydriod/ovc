@@ -20,9 +20,9 @@ export const cmsSections = {
     ], defaults: {
       heroEyebrow: "Construction · Architectural finishing · Maintenance", heroTitle: "BUILDING QUALITY.", heroHighlight: "FINISHING WITH EXCELLENCE.",
       heroDescription: "Professional construction, architectural finishing and building maintenance services focused on quality workmanship and customer satisfaction.",
-      aboutHeading: "Built on quality and commitment", aboutIntro: "Okechukwu Venatius Chibuike Ltd. provides construction, architectural finishing and building maintenance services. The company’s stated focus is quality workmanship and customer satisfaction.",
-      aboutDetails: "Explore the services or contact the team to discuss the scope and requirements of a project.", projectsHeading: "Our projects",
-      projectsDescription: "Client-supplied photographs, renderings and drawings. Captions and project claims are not assumed.", ctaHeading: "Have a project in mind?", ctaDescription: "Let's discuss your construction, painting or finishing requirements.",
+      aboutHeading: "Built on quality and commitment", aboutIntro: "Okechukwu Venatius Chibuike Ltd. provides construction, architectural finishing and building maintenance services with a focus on quality workmanship and customer satisfaction.",
+      aboutDetails: "Explore the services or contact the team to discuss your project requirements and next steps.", projectsHeading: "Our projects",
+      projectsDescription: "Explore photographs, renderings and drawings from OVC's construction and finishing work.", ctaHeading: "Have a project in mind?", ctaDescription: "Let's discuss your construction, painting or finishing requirements.",
     },
   },
   about: {
@@ -35,10 +35,10 @@ export const cmsSections = {
       { key: "approachHeading", label: "Approach section heading", help: "Heading for the process/approach section." },
       { key: "approachDescription", label: "Approach section text", help: "Explain the enquiry process.", multiline: true },
     ], defaults: {
-      heroTitle: "Built on quality and commitment", heroDescription: "An introduction to Okechukwu Venatius Chibuike Ltd. and the construction and finishing services in its supplied brief.",
-      storyHeading: "Construction and finishing with a focus on workmanship", storyBody: "Okechukwu Venatius Chibuike Ltd. is a construction and architectural finishing company. Its supplied service scope includes construction, painting and design, wall screeding, wallpaper installation, stucco finishing, maintenance, project coordination and related work.",
-      commitment: "The company describes its focus as quality workmanship and customer satisfaction. This website keeps the introduction concise until approved company history, mission, vision, leadership details or professional credentials are provided.",
-      approachHeading: "Clear scope. Careful execution.", approachDescription: "Project details, site conditions and the requested service are discussed before a scope is agreed. No project history, completion statistics or qualifications are assumed on this page.",
+      heroTitle: "Built on quality and commitment", heroDescription: "Learn about Okechukwu Venatius Chibuike Ltd. and its construction, finishing and maintenance services.",
+      storyHeading: "Construction and finishing with a focus on workmanship", storyBody: "Okechukwu Venatius Chibuike Ltd. is a construction and architectural finishing company. Services include construction, painting and design, wall screeding, wallpaper installation, stucco finishing, maintenance, project coordination and related work.",
+      commitment: "The company focuses on quality workmanship and customer satisfaction. Discuss your project requirements with the team to agree the right scope and next steps.",
+      approachHeading: "Clear scope. Careful execution.", approachDescription: "Project details, site conditions and the requested service are discussed before the scope and next steps are agreed.",
     },
   },
   services: {
@@ -60,9 +60,9 @@ export const cmsSections = {
       { key: "sidebar", label: "Portfolio note", help: "Clarify that images alone do not verify project completion.", multiline: true },
       { key: "galleryNote", label: "Gallery disclosure", help: "A brief factual note beneath the gallery.", multiline: true },
     ], defaults: {
-      heroTitle: "Our projects", heroDescription: "Browse client-supplied construction photographs, architectural renderings, detail images and drawings.",
-      sidebar: "Images are shown as provided. No project names, locations, dates, completion claims or budgets have been assumed.",
-      galleryNote: "These images were supplied for OVC's website. Renderings and drawings are presented as design visuals, not as confirmation of completed work.", images: defaultProjectImagePaths,
+      heroTitle: "Our projects", heroDescription: "Browse construction photographs, architectural renderings, detail images and drawings from OVC.",
+      sidebar: "Explore the images, then contact OVC to discuss a project with similar requirements.",
+      galleryNote: "Explore the gallery for inspiration and contact OVC to discuss your own construction or finishing project.", images: defaultProjectImagePaths,
     },
   },
   contact: {
