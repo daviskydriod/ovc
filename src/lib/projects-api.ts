@@ -7,6 +7,7 @@ export type PublicProject = {
   category: string;
   cover_url: string | null;
   cover_alt_text?: string | null;
+  gallery?: { id: number; title: string; original_name: string; alt_text: string; url: string; sort_order: number }[];
   created_at: string;
   updated_at: string;
 };

@@ -6,10 +6,11 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEv
 const API = (process.env.NEXT_PUBLIC_CMS_API_URL || "https://api.ovcconstructions.com/api").replace(/\/$/, "");
 type MediaItem = { id: number; filename: string; original_name: string; media_type: "image" | "video"; title: string; alt_text: string; is_published: boolean; url?: string };
 type Enquiry = { id: number; full_name: string; phone: string; email: string; service: string; location: string; description: string; status: "new" | "contacted" | "closed"; created_at: string };
-type ProjectRecord = { id: number; slug: string; title: string; summary: string; description: string; category: string; cover_media_id: number | null; cover_url: string | null; status: "draft" | "published"; sort_order: number };
+type ProjectImage = { id: number; title: string; original_name: string; alt_text: string; is_published: boolean; sort_order: number; url: string };
+type ProjectRecord = { id: number; slug: string; title: string; summary: string; description: string; category: string; cover_media_id: number | null; cover_url: string | null; gallery: ProjectImage[]; status: "draft" | "published"; sort_order: number };
 type Tab = "projects" | "enquiries";
-type ProjectDraft = { slug: string; title: string; summary: string; description: string; category: string; cover_media_id: string; cover_url: string; status: "draft" | "published"; sort_order: string };
-const emptyProject: ProjectDraft = { slug: "", title: "", summary: "", description: "", category: "", cover_media_id: "", cover_url: "", status: "draft", sort_order: "0" };
+type ProjectDraft = { slug: string; title: string; summary: string; description: string; category: string; cover_media_id: string; cover_url: string; gallery_media_ids: string[]; status: "draft" | "published"; sort_order: string };
+const emptyProject: ProjectDraft = { slug: "", title: "", summary: "", description: "", category: "", cover_media_id: "", cover_url: "", gallery_media_ids: [], status: "draft", sort_order: "0" };
 
 function slugify(value: string) {
   return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 120);
@@ -115,6 +116,7 @@ export default function AdminDashboard() {
       category: project.category || "",
       cover_media_id: project.cover_media_id ? String(project.cover_media_id) : "",
       cover_url: project.cover_url || "",
+      gallery_media_ids: (project.gallery || []).map((item) => String(item.id)),
       status: project.status,
       sort_order: String(project.sort_order ?? 0),
     });
@@ -158,23 +160,29 @@ export default function AdminDashboard() {
     setProjectRecords([]);
   }
 
-  async function uploadImage(file: File, input: HTMLInputElement) {
+  async function uploadImages(files: File[], input: HTMLInputElement, role: "cover" | "gallery") {
     setBusy(true);
     setModalNotice("");
-    const imageLabel = projectDraft.title.trim() || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
-    const form = new FormData();
-    form.append("file", file);
-    form.append("title", imageLabel);
-    form.append("alt_text", projectDraft.title.trim() || imageLabel);
     try {
-      const result = await request("/admin/media", { method: "POST", headers: { "X-CSRF-Token": csrf }, body: form });
-      const id = Number(result.media?.id);
-      if (!id) throw new Error("The upload completed, but the API did not return an image ID.");
-      await request(`/admin/media/${id}`, { method: "PATCH", headers: { "X-CSRF-Token": csrf }, body: JSON.stringify({ title: imageLabel, alt_text: projectDraft.title.trim() || imageLabel, is_published: true }) });
-      setProjectDraft((current) => ({ ...current, cover_media_id: String(id), cover_url: "" }));
+      const ids: number[] = [];
+      for (const file of files) {
+        const imageLabel = projectDraft.title.trim() || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+        const form = new FormData();
+        form.append("file", file);
+        form.append("title", imageLabel);
+        form.append("alt_text", projectDraft.title.trim() || imageLabel);
+        const result = await request("/admin/media", { method: "POST", headers: { "X-CSRF-Token": csrf }, body: form });
+        const id = Number(result.media?.id);
+        if (!id) throw new Error("The upload completed, but the API did not return an image ID.");
+        await request(`/admin/media/${id}`, { method: "PATCH", headers: { "X-CSRF-Token": csrf }, body: JSON.stringify({ title: imageLabel, alt_text: projectDraft.title.trim() || imageLabel, is_published: true }) });
+        ids.push(id);
+      }
+      setProjectDraft((current) => role === "cover"
+        ? ({ ...current, cover_media_id: String(ids[0] || ""), cover_url: "" })
+        : ({ ...current, gallery_media_ids: [...new Set([...current.gallery_media_ids, ...ids.map(String)])] }));
       const mediaResult = await request("/admin/media?limit=100&type=image");
       setMedia(mediaResult.media || []);
-      setModalNotice("Image uploaded and selected. Save the project to attach it.");
+      setModalNotice(role === "cover" ? "Cover image uploaded and selected. Save the project to attach it." : `${ids.length} additional image${ids.length === 1 ? "" : "s"} uploaded. Save the project to attach them.`);
     } catch (error) {
       setModalNotice(messageFrom(error));
     } finally {
@@ -204,6 +212,7 @@ export default function AdminDashboard() {
       category: projectDraft.category.trim(),
       cover_media_id: projectDraft.cover_media_id ? Number(projectDraft.cover_media_id) : null,
       cover_url: projectDraft.cover_media_id ? null : (projectDraft.cover_url || null),
+      gallery_media_ids: projectDraft.gallery_media_ids.filter((id) => id !== projectDraft.cover_media_id).map(Number),
       sort_order: Number(projectDraft.sort_order) || 0,
     };
     try {
@@ -346,7 +355,7 @@ export default function AdminDashboard() {
               <article><span>Drafts</span><strong>{draftCount}</strong></article>
             </div>
             <div className="admin-project-toolbar">
-              <div><p className="eyebrow">YOUR PORTFOLIO</p><h2>Projects</h2><p>Manage each project and its main image from one place.</p></div>
+              <div><p className="eyebrow">YOUR PORTFOLIO</p><h2>Projects</h2><p>Manage each project, cover image and gallery from one place.</p></div>
               <button ref={addProjectButtonRef} className="button button-gold admin-add-project" type="button" onClick={openNewProject}>+ Add project</button>
             </div>
             <div className="admin-project-controls">
@@ -377,7 +386,7 @@ export default function AdminDashboard() {
 
       {showProjectModal && <div className="admin-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeProjectModal(); }}>
         <section className="admin-project-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-project-modal-title" aria-describedby="admin-project-modal-help">
-          <header className="admin-modal-header"><div><p className="eyebrow">PROJECT DETAILS</p><h2 id="admin-project-modal-title">{editingProjectId ? "Edit project" : "Add a project"}</h2><p id="admin-project-modal-help">Add the main details and image. The project URL and summary can be created for you.</p></div><button className="admin-modal-close" type="button" aria-label="Close project form" onClick={closeProjectModal}>×</button></header>
+          <header className="admin-modal-header"><div><p className="eyebrow">PROJECT DETAILS</p><h2 id="admin-project-modal-title">{editingProjectId ? "Edit project" : "Add a project"}</h2><p id="admin-project-modal-help">Add the project details, cover image and any additional gallery images.</p></div><button className="admin-modal-close" type="button" aria-label="Close project form" onClick={closeProjectModal}>×</button></header>
           {modalNotice && <p className="admin-modal-notice" role="status">{modalNotice}</p>}
           <form className="admin-modal-form" onSubmit={saveProject}>
             <label className="admin-modal-field admin-modal-field-wide"><span>Project title <b>*</b></span><input ref={projectTitleRef} required maxLength={180} value={projectDraft.title} onChange={(event) => setProjectDraft((current) => ({ ...current, title: event.target.value, slug: slugTouched ? current.slug : slugify(event.target.value) }))} placeholder="For example: Residential exterior finish" /><small>The web address is generated from this title automatically.</small></label>
@@ -386,10 +395,14 @@ export default function AdminDashboard() {
             <label className="admin-modal-field"><span>Category <em>optional</em></span><select value={projectDraft.category} onChange={(event) => setProjectDraft((current) => ({ ...current, category: event.target.value }))}><option value="">Choose a category</option><option>Construction</option><option>Renovation</option><option>Architectural finishing</option><option>Interior finishing</option><option>Design &amp; plans</option><option>Maintenance</option><option>Other</option></select></label>
             <label className="admin-modal-field"><span>Short summary <em>optional</em></span><textarea rows={3} maxLength={500} value={projectDraft.summary} onChange={(event) => setProjectDraft((current) => ({ ...current, summary: event.target.value }))} placeholder="Leave blank to create one from the project details below." /><small>If left empty, the first part of the description is used.</small></label>
             <label className="admin-modal-field admin-modal-field-wide"><span>Project details <b>*</b></span><textarea required rows={5} maxLength={12000} value={projectDraft.description} onChange={(event) => setProjectDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Describe the work accurately. You can keep a draft private until the details are ready." /></label>
-            <div className="admin-image-field admin-modal-field-wide"><div className="admin-image-field-heading"><span>Main project image <em>optional</em></span><small>Upload a new image or select one already uploaded.</small></div>
+            <div className="admin-image-field admin-modal-field-wide"><div className="admin-image-field-heading"><span>Main project image <em>optional</em></span><small>This image appears first on the project page.</small></div>
               {(projectDraft.cover_url || projectDraft.cover_media_id) && <div className="admin-modal-image-preview">{projectDraft.cover_url ? <img src={projectDraft.cover_url} alt="Current project cover" /> : <img src={media.find((item) => item.id === Number(projectDraft.cover_media_id))?.url || ""} alt="Selected project cover" />}<span>Current cover image</span></div>}
               <label className="admin-modal-field"><span>Select an uploaded image</span><select value={projectDraft.cover_media_id} onChange={(event) => setProjectDraft((current) => ({ ...current, cover_media_id: event.target.value, cover_url: event.target.value ? "" : current.cover_url }))}><option value="">{projectDraft.cover_url ? "Keep current image" : "No image selected"}</option>{media.filter((item) => item.media_type === "image" && item.is_published).map((item) => <option value={item.id} key={item.id}>{item.title || item.original_name}</option>)}</select></label>
-              <label className="admin-upload-image-control"><span>Or upload a new image</span><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={busy} onChange={(event: ChangeEvent<HTMLInputElement>) => { const file = event.currentTarget.files?.[0]; if (file) void uploadImage(file, event.currentTarget); }} /><small>JPG, PNG, WebP or GIF. Uploaded images are automatically published and selected for this project.</small></label>
+              <label className="admin-upload-image-control"><span>Or upload a new cover image</span><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={busy} onChange={(event: ChangeEvent<HTMLInputElement>) => { const file = event.currentTarget.files?.[0]; if (file) void uploadImages([file], event.currentTarget, "cover"); }} /><small>JPG, PNG, WebP or GIF.</small></label>
+              <div className="admin-image-field-heading admin-gallery-heading"><span>Additional project images <em>optional</em></span><small>These appear in the gallery below the cover image.</small></div>
+              {projectDraft.gallery_media_ids.length > 0 && <div className="admin-gallery-preview-grid">{projectDraft.gallery_media_ids.map((id) => { const item = media.find((mediaItem) => mediaItem.id === Number(id)); return item?.url ? <div className="admin-gallery-preview" key={id}><img src={item.url} alt={item.alt_text || item.title || item.original_name} /><button type="button" aria-label={`Remove ${item.title || item.original_name} from gallery`} onClick={() => setProjectDraft((current) => ({ ...current, gallery_media_ids: current.gallery_media_ids.filter((galleryId) => galleryId !== id) }))}>×</button></div> : null; })}</div>}
+              <label className="admin-modal-field"><span>Select uploaded gallery images</span><select multiple size={Math.min(6, Math.max(3, media.length))} value={projectDraft.gallery_media_ids} onChange={(event) => setProjectDraft((current) => ({ ...current, gallery_media_ids: Array.from(event.currentTarget.selectedOptions, (option) => option.value) }))}>{media.filter((item) => item.media_type === "image" && item.is_published && String(item.id) !== projectDraft.cover_media_id).map((item) => <option value={item.id} key={item.id}>{item.title || item.original_name}</option>)}</select><small>Hold Ctrl or Command to select more than one image.</small></label>
+              <label className="admin-upload-image-control"><span>Upload additional images</span><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple disabled={busy} onChange={(event: ChangeEvent<HTMLInputElement>) => { const files = Array.from(event.currentTarget.files || []); if (files.length) void uploadImages(files, event.currentTarget, "gallery"); }} /><small>You can choose several JPG, PNG, WebP or GIF files. Save the project to attach them.</small></label>
             </div>
             <label className="admin-modal-field admin-modal-status"><span>Visibility</span><select value={projectDraft.status} onChange={(event) => setProjectDraft((current) => ({ ...current, status: event.target.value as ProjectDraft["status"] }))}><option value="draft">Save as draft — not public</option><option value="published">Publish on the website</option></select></label>
             <footer className="admin-modal-actions"><button className="button button-outline-dark" type="button" onClick={closeProjectModal} disabled={busy}>Cancel</button><button className="button button-gold" type="submit" disabled={busy}>{busy ? "Saving…" : projectDraft.status === "published" ? "Save & publish" : editingProjectId ? "Save draft" : "Add project"}</button></footer>

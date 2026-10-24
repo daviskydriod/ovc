@@ -53,6 +53,17 @@ CREATE TABLE IF NOT EXISTS projects (
   CONSTRAINT fk_projects_cover_media FOREIGN KEY (cover_media_id) REFERENCES media (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+-- Additional published images attached to a project; the cover remains optional and separate.
+CREATE TABLE IF NOT EXISTS project_media (
+  project_id BIGINT UNSIGNED NOT NULL,
+  media_id BIGINT UNSIGNED NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (project_id, media_id),
+  KEY idx_project_media_order (project_id, sort_order, media_id),
+  CONSTRAINT fk_project_media_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_project_media_media FOREIGN KEY (media_id) REFERENCES media (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
 -- Contact submissions contain personal data. Apply a retention/deletion policy.
 -- IP addresses are not stored directly; ip_hash uses RATE_LIMIT_HMAC_KEY for abuse limits.
 CREATE TABLE IF NOT EXISTS contact_enquiries (
@@ -151,3 +162,5 @@ INSERT IGNORE INTO schema_version (version, description)
 VALUES (3, 'Complete OVC content, media, projects and enquiries schema; single-import installer');
 INSERT IGNORE INTO schema_version (version, description)
 VALUES (4, 'Projects support direct GitHub-hosted image URLs');
+INSERT IGNORE INTO schema_version (version, description)
+VALUES (5, 'Projects support additional gallery images');

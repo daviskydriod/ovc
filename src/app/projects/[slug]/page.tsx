@@ -34,10 +34,12 @@ export default async function ProjectDetailPage({ params }: Props) {
   const { slug } = await params;
   const project = await getPublishedProject(slug);
   if (!project) notFound();
+  const gallery = project.gallery || [];
   return (
     <main id="main-content">
       <section className="page-hero"><div className="shell"><Link className="text-link" href="/projects"><ArrowLeft size={15} aria-hidden="true"/> All projects</Link><p className="eyebrow">{project.category || "Our work"}</p><h1>{project.title}</h1>{project.summary && <p className="page-hero-description">{project.summary}</p>}</div></section>
       {project.cover_url && <section className="page-content"><div className="shell"><figure className="managed-project-detail-image"><img src={project.cover_url} alt={project.cover_alt_text || project.title} fetchPriority="high"/></figure></div></section>}
+      {gallery.length > 0 && <section className="section"><div className="shell"><SectionHeading eyebrow="Project gallery" title="More from this project"/><div className="project-gallery-grid">{gallery.map((image) => <figure className="project-gallery-item" key={image.id}><img src={image.url} alt={image.alt_text || image.title || project.title} loading="lazy" decoding="async"/><figcaption>{image.title || project.title}</figcaption></figure>)}</div></div></section>}
       <section className="section section-muted"><div className="shell"><SectionHeading eyebrow="Project overview" title="About this project"/><div className="project-feature-copy"><p className="project-detail-description">{project.description}</p></div></div></section>
       <section className="section"><div className="cta-panel shell"><div><p className="eyebrow">Have something similar in mind?</p><h2>Let’s discuss your project.</h2><p>Tell us what you’re planning, where the work is needed and how we can help.</p></div><Link className="button button-gold" href="/contact#quote">Make an enquiry <ArrowRight size={16} aria-hidden="true"/></Link></div></section>
     </main>
