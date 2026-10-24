@@ -613,3 +613,154 @@ body:has(.admin-page) .site-footer { display: none; }
   .admin-login-panel { padding: 26px 23px 30px; }
   .admin-login-brand { width: 142px; }
 }
+
+
+/* Simplified OVC admin desk: clear sections, project cards and a focused edit modal. */
+.admin-page-dashboard { min-height: 100vh; padding: 26px 0 70px; background: #f4f6f9; }
+.admin-shell-dashboard { width: min(1180px, calc(100% - 48px)); }
+.admin-dashboard-header { margin-bottom: 25px; }
+.admin-dashboard-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.admin-dashboard-brand img { display: block; width: 112px; height: 47px; object-fit: contain; }
+.admin-dashboard-brand span { padding-left: 12px; color: #596579; border-left: 1px solid #d9dee7; font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+.admin-dashboard-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.admin-dashboard-heading .eyebrow, .admin-project-toolbar .eyebrow { margin: 0 0 8px; color: #96721e; font-size: 10px; font-weight: 850; letter-spacing: .13em; }
+.admin-dashboard-heading h1 { margin: 0; color: var(--navy); font-family: "Montserrat Variable", sans-serif; font-size: clamp(29px, 4vw, 42px); font-weight: 800; letter-spacing: -.045em; line-height: 1.1; }
+.admin-dashboard-heading p:not(.eyebrow) { margin: 9px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.admin-header-actions { display: flex; gap: 9px; flex-shrink: 0; }
+.admin-header-actions .button { min-height: 42px; padding-inline: 15px; }
+.admin-page-dashboard .admin-notice { margin: 0 0 18px; padding: 12px 15px; border: 1px solid #eadcae; border-left: 4px solid var(--gold); border-radius: 7px; font-size: 13px; line-height: 1.55; }
+.admin-tabs { display: flex; gap: 8px; margin: 0 0 18px; padding: 6px; background: #e9edf3; border-radius: 11px; }
+.admin-tabs .admin-tab { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 45px; padding: 10px 19px; color: #526074; background: transparent; border: 0; border-radius: 8px; font-size: 13px; font-weight: 750; cursor: pointer; }
+.admin-tabs .admin-tab.is-active { color: var(--navy); background: #fff; box-shadow: 0 2px 8px rgb(20 37 63 / 9%); }
+.admin-tabs .admin-tab span { min-width: 22px; padding: 3px 7px; color: #657185; background: #f0f2f6; border-radius: 99px; font-size: 10px; text-align: center; }
+.admin-tabs .admin-tab.is-active span { color: #775a13; background: #fff3cb; }
+.admin-dashboard-panel { min-height: 340px; padding: 24px; background: #fff; border: 1px solid #e1e6ed; border-radius: 12px; box-shadow: 0 8px 28px rgb(16 37 68 / 4%); }
+.admin-stats-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 26px; }
+.admin-stats-row article { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 17px; background: #f8f9fb; border: 1px solid #edf0f4; border-radius: 9px; }
+.admin-stats-row span { color: #667286; font-size: 12px; font-weight: 650; }
+.admin-stats-row strong { color: var(--navy); font-family: "Montserrat Variable", sans-serif; font-size: 22px; font-weight: 800; }
+.admin-project-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 19px; }
+.admin-project-toolbar h2 { margin: 0; color: var(--navy); font-family: "Montserrat Variable", sans-serif; font-size: 25px; font-weight: 800; letter-spacing: -.035em; }
+.admin-project-toolbar p:not(.eyebrow) { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.admin-add-project { min-height: 45px; padding-inline: 20px; white-space: nowrap; }
+.admin-project-controls { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; padding: 12px; background: #f7f8fa; border: 1px solid #edf0f4; border-radius: 9px; }
+.admin-search-box { display: flex; align-items: center; gap: 9px; width: min(360px, 100%); min-height: 40px; padding: 0 11px; color: #8590a1; background: #fff; border: 1px solid #dce2ea; border-radius: 7px; }
+.admin-search-box > span:not(.sr-only) { font-size: 22px; line-height: 1; }
+.admin-search-box input { width: 100%; min-width: 0; height: 38px; color: var(--ink); background: transparent; border: 0; outline: 0; font-size: 12px; }
+.admin-search-box:focus-within { border-color: var(--navy); outline: 3px solid rgb(217 166 46 / 18%); }
+.admin-filter-group { display: flex; gap: 4px; padding: 3px; background: #edf0f4; border-radius: 7px; }
+.admin-filter-group button { min-height: 33px; padding: 7px 11px; color: #657185; background: transparent; border: 0; border-radius: 5px; font-size: 10px; font-weight: 750; cursor: pointer; }
+.admin-filter-group button.is-selected { color: var(--navy); background: #fff; box-shadow: 0 1px 4px rgb(20 37 63 / 9%); }
+.admin-project-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.admin-project-card { min-width: 0; overflow: hidden; background: #fff; border: 1px solid #e1e6ed; border-radius: 10px; transition: box-shadow .18s ease, transform .18s ease; }
+.admin-project-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgb(16 37 68 / 9%); }
+.admin-project-card-image { position: relative; display: grid; place-items: center; height: 176px; overflow: hidden; color: #8993a1; background: #edf0f4; font-size: 11px; }
+.admin-project-card-image img { width: 100%; height: 100%; object-fit: cover; }
+.admin-project-status { position: absolute; top: 10px; left: 10px; padding: 5px 9px; color: #6b4d00; background: #fff2c7; border: 1px solid rgb(255 255 255 / 70%); border-radius: 99px; font-size: 9px; font-weight: 850; text-transform: uppercase; }
+.admin-project-status.status-published { color: #1c684b; background: #e6f5ec; }
+.admin-project-card-body { padding: 15px; }
+.admin-project-category { margin: 0 0 5px; color: #8b6a1c; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.admin-project-card-body h3 { margin: 0; color: var(--navy); font-family: "Montserrat Variable", sans-serif; font-size: 15px; font-weight: 800; line-height: 1.35; }
+.admin-project-card-summary { display: -webkit-box; min-height: 39px; margin: 8px 0 14px; overflow: hidden; color: #697588; font-size: 11px; line-height: 1.6; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.admin-project-card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 11px; border-top: 1px solid #edf0f4; }
+.admin-project-card-actions .button { min-height: 35px; padding: 7px 12px; font-size: 10px; }
+.admin-project-view-link { margin-left: auto; color: var(--navy); font-size: 10px; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
+.admin-project-card-actions .admin-delete { margin-left: auto; }
+.admin-project-empty { display: grid; justify-items: center; padding: 46px 20px; text-align: center; background: #fafbfc; border: 1px dashed #d8dee8; border-radius: 10px; }
+.admin-empty-mark { display: grid; place-items: center; width: 43px; height: 43px; color: #8e6a14; background: #fff2cb; border-radius: 50%; font-size: 23px; }
+.admin-project-empty h3 { margin: 13px 0 5px; color: var(--navy); font-family: "Montserrat Variable", sans-serif; font-size: 18px; }
+.admin-project-empty p { max-width: 430px; margin: 0 0 17px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.admin-project-empty .button { min-height: 42px; padding-inline: 17px; }
+.admin-enquiry-total { padding: 9px 12px; color: #775a13; background: #fff4d4; border-radius: 99px; font-size: 11px; font-weight: 750; white-space: nowrap; }
+.admin-enquiry-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.admin-dashboard-panel .admin-enquiry-card { min-width: 0; padding: 18px; background: #fff; border: 1px solid #e1e6ed; border-radius: 10px; }
+.admin-enquiry-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.admin-enquiry-top time { color: #7c8797; font-size: 10px; }
+.admin-enquiry-status { padding: 5px 9px; color: #755405; background: #fff1c6; border-radius: 99px; font-size: 9px; font-weight: 850; text-transform: uppercase; }
+.admin-enquiry-status.status-contacted { color: #175d79; background: #e1f4fb; }
+.admin-enquiry-status.status-closed { color: #316246; background: #e8f5ec; }
+.admin-dashboard-panel .admin-enquiry-card h3 { margin: 13px 0 12px; color: var(--navy); font-family: "Montserrat Variable", sans-serif; font-size: 18px; }
+.admin-enquiry-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.admin-enquiry-details > p { display: grid; gap: 4px; min-width: 0; margin: 0; color: #536075; font-size: 11px; overflow-wrap: anywhere; }
+.admin-enquiry-details strong { color: #778295; font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
+.admin-enquiry-details a { color: var(--navy); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.admin-enquiry-project-details { grid-column: 1 / -1; padding-top: 11px; border-top: 1px solid #edf0f4; }
+.admin-enquiry-project-details > strong { color: #778295; font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
+.admin-enquiry-project-details p { margin: 6px 0 0; color: #4f5c70; font-size: 12px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.admin-enquiry-status-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #edf0f4; color: #6e7887; font-size: 10px; font-weight: 750; }
+.admin-enquiry-status-field select { min-height: 35px; padding: 6px 10px; color: var(--navy); background: #f8f9fb; border: 1px solid #dce2ea; border-radius: 6px; font-size: 10px; }
+.admin-modal-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 24px; overflow-y: auto; background: rgb(10 22 42 / 62%); backdrop-filter: blur(3px); overscroll-behavior: contain; }
+.admin-project-dialog { width: min(820px, 100%); max-height: min(900px, calc(100svh - 48px)); overflow: auto; background: #fff; border: 1px solid rgb(255 255 255 / 55%); border-radius: 14px; box-shadow: 0 25px 90px rgb(0 0 0 / 28%); }
+.admin-modal-header { position: sticky; z-index: 2; top: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 22px 26px 17px; background: #fff; border-bottom: 1px solid #e9edf2; }
+.admin-modal-header .eyebrow { margin: 0 0 7px; color: #96721e; font-size: 9px; font-weight: 850; letter-spacing: .13em; }
+.admin-modal-header h2 { margin: 0; color: var(--navy); font-family: "Montserrat Variable", sans-serif; font-size: 23px; font-weight: 800; letter-spacing: -.03em; }
+.admin-modal-header p:last-child { max-width: 610px; margin: 7px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.admin-modal-close { display: grid; flex: 0 0 36px; place-items: center; width: 36px; height: 36px; color: #536075; background: #f2f4f7; border: 0; border-radius: 50%; font-size: 25px; line-height: 1; cursor: pointer; }
+.admin-modal-close:hover { color: #172b4d; background: #e7ebf1; }
+.admin-modal-notice { margin: 16px 26px 0; padding: 10px 12px; color: #674d0c; background: #fff6dd; border-left: 3px solid var(--gold); border-radius: 4px; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.admin-modal-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 21px 26px 24px; }
+.admin-modal-field { display: grid; align-content: start; gap: 7px; min-width: 0; color: #34445c; font-size: 11px; font-weight: 750; }
+.admin-modal-field-wide { grid-column: 1 / -1; }
+.admin-modal-field b { color: #a43a34; }
+.admin-modal-field em, .admin-image-field em { color: #8993a1; font-size: 9px; font-style: normal; font-weight: 550; }
+.admin-modal-field input, .admin-modal-field select, .admin-modal-field textarea { width: 100%; min-height: 42px; padding: 10px 11px; color: #1d2d46; background: #fff; border: 1px solid #d4dbe5; border-radius: 6px; font: inherit; font-size: 12px; }
+.admin-modal-field textarea { min-height: 79px; line-height: 1.6; resize: vertical; }
+.admin-modal-field input:focus, .admin-modal-field select:focus, .admin-modal-field textarea:focus, .admin-upload-image-control input:focus { border-color: #223c64; outline: 3px solid rgb(217 166 46 / 20%); outline-offset: 1px; }
+.admin-modal-field small, .admin-upload-image-control small { color: #818b9a; font-size: 9px; font-weight: 500; line-height: 1.55; }
+.admin-generated-slug { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 10px; grid-column: 1 / -1; margin-top: -9px; color: #6f7b8c; font-size: 10px; }
+.admin-generated-slug code { padding: 5px 7px; color: #364761; background: #f2f4f7; border-radius: 4px; font-size: 10px; overflow-wrap: anywhere; }
+.admin-generated-slug button { padding: 4px 0; color: #81600f; background: none; border: 0; font-size: 10px; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.admin-image-field { display: grid; gap: 12px; padding: 14px; background: #f8f9fb; border: 1px solid #e7ebf1; border-radius: 8px; }
+.admin-image-field-heading { display: grid; gap: 4px; color: #34445c; font-size: 11px; font-weight: 750; }
+.admin-image-field-heading small { color: #818b9a; font-size: 10px; font-weight: 500; }
+.admin-modal-image-preview { display: flex; align-items: center; gap: 12px; min-width: 0; color: #667286; font-size: 10px; }
+.admin-modal-image-preview img { width: 74px; height: 56px; object-fit: cover; background: #e6eaf0; border: 1px solid #dfe4eb; border-radius: 5px; }
+.admin-image-field .admin-modal-field { margin: 0; }
+.admin-upload-image-control { display: grid; gap: 7px; padding-top: 11px; border-top: 1px solid #e4e8ee; color: #34445c; font-size: 10px; font-weight: 750; }
+.admin-upload-image-control input { width: 100%; min-height: 39px; padding: 6px; color: #536075; background: #fff; border: 1px dashed #cbd3df; border-radius: 6px; font-size: 10px; }
+.admin-upload-image-control input::file-selector-button { margin-right: 9px; padding: 7px 11px; color: #fff; background: var(--navy); border: 0; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer; }
+.admin-modal-status { grid-column: 1 / -1; }
+.admin-modal-actions { display: flex; justify-content: flex-end; gap: 9px; grid-column: 1 / -1; margin-top: 2px; padding-top: 15px; border-top: 1px solid #e9edf2; }
+.admin-modal-actions .button { min-height: 42px; padding-inline: 17px; }
+@media (max-width: 980px) {
+  .admin-project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-enquiry-list { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .admin-page-dashboard { padding: 16px 0 40px; }
+  .admin-shell-dashboard { width: calc(100% - 28px); }
+  .admin-dashboard-brand { margin-bottom: 18px; }
+  .admin-dashboard-brand img { width: 96px; height: 40px; }
+  .admin-dashboard-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .admin-dashboard-heading h1 { font-size: 31px; }
+  .admin-header-actions { width: 100%; }
+  .admin-header-actions .button { flex: 1; }
+  .admin-dashboard-panel { padding: 15px; border-radius: 10px; }
+  .admin-tabs .admin-tab { flex: 1; padding-inline: 10px; }
+  .admin-stats-row { gap: 7px; margin-bottom: 21px; }
+  .admin-stats-row article { align-items: flex-start; flex-direction: column-reverse; gap: 2px; padding: 10px; }
+  .admin-stats-row strong { font-size: 19px; }
+  .admin-stats-row span { font-size: 9px; }
+  .admin-project-toolbar { align-items: stretch; flex-direction: column; }
+  .admin-add-project { width: 100%; }
+  .admin-project-controls { align-items: stretch; flex-direction: column; padding: 9px; }
+  .admin-search-box { width: 100%; }
+  .admin-filter-group { width: 100%; }
+  .admin-filter-group button { flex: 1; padding-inline: 5px; }
+  .admin-project-grid { grid-template-columns: 1fr; gap: 12px; }
+  .admin-project-card-image { height: 200px; }
+  .admin-enquiry-total { align-self: flex-start; }
+  .admin-dashboard-panel .admin-enquiry-card { padding: 14px; }
+  .admin-enquiry-details { grid-template-columns: 1fr; gap: 10px; }
+  .admin-enquiry-project-details { grid-column: auto; }
+  .admin-modal-backdrop { align-items: end; padding: 0; }
+  .admin-project-dialog { width: 100%; max-height: 94svh; border-radius: 15px 15px 0 0; }
+  .admin-modal-header { padding: 18px 18px 14px; }
+  .admin-modal-header h2 { font-size: 21px; }
+  .admin-modal-form { grid-template-columns: 1fr; gap: 14px; padding: 16px 18px 22px; }
+  .admin-modal-field-wide, .admin-generated-slug, .admin-modal-status, .admin-modal-actions { grid-column: auto; }
+  .admin-generated-slug { margin-top: -6px; }
+  .admin-modal-notice { margin-inline: 18px; }
+  .admin-modal-actions { position: sticky; bottom: -22px; padding: 12px 0 0; background: #fff; }
+  .admin-modal-actions .button { flex: 1; }
+}
