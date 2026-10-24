@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/metadata";
 import { getPublishedProjects } from "@/lib/projects-api";
 
 export const metadata = pageMetadata("Projects", "Explore selected construction, renovation and finishing projects by OVC.", "/projects");
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
   const projects = await getPublishedProjects();

@@ -11,7 +11,7 @@ export type PublicProject = {
   updated_at: string;
 };
 
-const API = (process.env.CMS_API_URL || process.env.NEXT_PUBLIC_CMS_API_URL || "https://api.ovcconstructions.com/api").replace(/\/$/, "");
+const API = (process.env.NEXT_PUBLIC_CMS_API_URL || "https://api.ovcconstructions.com/api").replace(/\/$/, "");
 
 /** Fetch published project records with ISR so the portfolio can be pre-rendered for search crawlers. */
 export async function getPublishedProjects(): Promise<PublicProject[]> {
