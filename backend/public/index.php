@@ -56,7 +56,7 @@ function handle_health(): never {
         $pdo = db();
         $checks['database'] = (bool)$pdo->query('SELECT 1')->fetchColumn();
         $tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
-        $required = ['site_sections', 'media', 'projects', 'contact_enquiries'];
+        $required = ['site_sections', 'media', 'projects', 'project_media', 'contact_enquiries'];
         $checks['schema'] = count(array_diff($required, $tables)) === 0;
     } catch (Throwable $e) {
         error_log('OVC health check failed: ' . $e->getMessage());
@@ -272,6 +272,44 @@ function project_fields(array $body, bool $partial): array {
     return $fields;
 }
 
+function gallery_media_ids(array $body): ?array {
+    if (!array_key_exists('gallery_media_ids', $body)) return null;
+    if (!is_array($body['gallery_media_ids']) || count($body['gallery_media_ids']) > 50) json_response(['error' => 'gallery_media_ids must contain up to 50 image ids.'], 422);
+    $ids = [];
+    foreach ($body['gallery_media_ids'] as $id) {
+        if ((!is_int($id) && !is_string($id)) || !ctype_digit((string)$id) || (int)$id < 1) json_response(['error' => 'gallery_media_ids must contain positive image ids.'], 422);
+        $ids[(int)$id] = true;
+    }
+    $ids = array_keys($ids);
+    if ($ids) {
+        $check = db()->prepare("SELECT id FROM media WHERE media_type = 'image' AND id IN (" . implode(',', array_fill(0, count($ids), '?')) . ")");
+        $check->execute($ids);
+        $found = array_map('intval', $check->fetchAll(PDO::FETCH_COLUMN));
+        if (count($found) !== count($ids)) json_response(['error' => 'Every gallery image must reference an existing image.'], 422);
+    }
+    return $ids;
+}
+
+function sync_project_gallery(int $projectId, array $mediaIds): void {
+    $pdo = db();
+    $pdo->prepare('DELETE FROM project_media WHERE project_id = :project_id')->execute(['project_id' => $projectId]);
+    $stmt = $pdo->prepare('INSERT INTO project_media (project_id, media_id, sort_order) VALUES (:project_id, :media_id, :sort_order)');
+    foreach (array_values($mediaIds) as $order => $mediaId) $stmt->execute(['project_id' => $projectId, 'media_id' => (int)$mediaId, 'sort_order' => $order]);
+}
+
+function project_gallery(int $projectId, bool $admin): array {
+    $where = $admin ? '' : ' AND m.is_published = 1';
+    $stmt = db()->prepare("SELECT m.id, m.title, m.original_name, m.alt_text, m.is_published, pm.sort_order FROM project_media pm INNER JOIN media m ON m.id = pm.media_id WHERE pm.project_id = :project_id AND m.media_type = 'image'{$where} ORDER BY pm.sort_order ASC, pm.media_id ASC");
+    $stmt->execute(['project_id' => $projectId]);
+    $items = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $row['id'] = (int)$row['id']; $row['is_published'] = (bool)$row['is_published']; $row['sort_order'] = (int)$row['sort_order'];
+        $row['url'] = rtrim((string)env_value('PUBLIC_API_URL', ''), '/') . '/media/' . $row['id'];
+        $items[] = $row;
+    }
+    return $items;
+}
+
 function handle_projects_list(bool $admin): never {
     if ($admin) require_admin();
     $page = page_params(); $where = $admin ? '1=1' : "p.status = 'published'";
@@ -279,7 +317,7 @@ function handle_projects_list(bool $admin): never {
     $pdo = db(); $total = (int)$pdo->query("SELECT COUNT(*) FROM projects p WHERE {$where}")->fetchColumn();
     $sql = "SELECT p.id, p.slug, p.title, p.summary, p.description, p.category, p.cover_media_id, p.cover_url, p.status, p.sort_order, p.created_at, p.updated_at, m.id AS joined_media_id, m.alt_text AS cover_alt_text FROM projects p LEFT JOIN media m ON m.id = p.cover_media_id AND m.is_published = 1 WHERE {$where} ORDER BY p.sort_order ASC, p.created_at DESC LIMIT :limit OFFSET :offset";
     $stmt = $pdo->prepare($sql); $stmt->bindValue('limit', $page['limit'], PDO::PARAM_INT); $stmt->bindValue('offset', $page['offset'], PDO::PARAM_INT); $stmt->execute(); $items = $stmt->fetchAll();
-    foreach ($items as &$item) { $item['id'] = (int)$item['id']; $item['cover_media_id'] = $item['cover_media_id'] === null ? null : (int)$item['cover_media_id']; $item['sort_order'] = (int)$item['sort_order']; $item['cover_url'] = $item['cover_url'] ?: ($item['joined_media_id'] ? rtrim((string)env_value('PUBLIC_API_URL', ''), '/') . '/media/' . $item['joined_media_id'] : null); unset($item['joined_media_id']); if (!$admin) { unset($item['status'], $item['sort_order'], $item['cover_media_id']); } }
+    foreach ($items as &$item) { $item['id'] = (int)$item['id']; $item['cover_media_id'] = $item['cover_media_id'] === null ? null : (int)$item['cover_media_id']; $item['sort_order'] = (int)$item['sort_order']; $item['cover_url'] = $item['cover_url'] ?: ($item['joined_media_id'] ? rtrim((string)env_value('PUBLIC_API_URL', ''), '/') . '/media/' . $item['joined_media_id'] : null); unset($item['joined_media_id']); $item['gallery'] = project_gallery($item['id'], $admin); if (!$admin) { unset($item['status'], $item['sort_order'], $item['cover_media_id']); } }
     unset($item);
     json_response(['projects' => $items, 'pagination' => ['limit' => $page['limit'], 'offset' => $page['offset'], 'total' => $total, 'hasMore' => $page['offset'] + count($items) < $total]]);
 }
@@ -287,7 +325,7 @@ function handle_projects_list(bool $admin): never {
 function handle_project_detail(string $slug): never {
     $stmt = db()->prepare("SELECT p.id, p.slug, p.title, p.summary, p.description, p.category, p.cover_url, p.created_at, p.updated_at, m.id AS media_id, m.alt_text AS cover_alt_text FROM projects p LEFT JOIN media m ON m.id = p.cover_media_id AND m.is_published = 1 WHERE p.slug = :slug AND p.status = 'published'");
     $stmt->execute(['slug' => $slug]); $item = $stmt->fetch(); if (!$item) json_response(['error' => 'Project not found.'], 404);
-    $item['id'] = (int)$item['id']; $item['cover_url'] = $item['cover_url'] ?: ($item['media_id'] ? rtrim((string)env_value('PUBLIC_API_URL', ''), '/') . '/media/' . $item['media_id'] : null); unset($item['media_id']);
+    $item['id'] = (int)$item['id']; $item['cover_url'] = $item['cover_url'] ?: ($item['media_id'] ? rtrim((string)env_value('PUBLIC_API_URL', ''), '/') . '/media/' . $item['media_id'] : null); unset($item['media_id']); $item['gallery'] = project_gallery($item['id'], false);
     json_response(['project' => $item]);
 }
 
@@ -296,24 +334,30 @@ function handle_admin_project_detail(int $id): never {
     $stmt = db()->prepare('SELECT id, slug, title, summary, description, category, cover_media_id, cover_url, status, sort_order, created_at, updated_at FROM projects WHERE id = :id');
     $stmt->execute(['id' => $id]); $item = $stmt->fetch();
     if (!$item) json_response(['error' => 'Project not found.'], 404);
-    $item['id'] = (int)$item['id']; $item['cover_media_id'] = $item['cover_media_id'] === null ? null : (int)$item['cover_media_id']; $item['sort_order'] = (int)$item['sort_order'];
+    $item['id'] = (int)$item['id']; $item['cover_media_id'] = $item['cover_media_id'] === null ? null : (int)$item['cover_media_id']; $item['sort_order'] = (int)$item['sort_order']; $item['gallery'] = project_gallery($item['id'], true);
     json_response(['project' => $item]);
 }
 
 function handle_project_create(): never {
-    require_admin(); require_csrf(); $fields = project_fields(request_json(24000), false);
-    $stmt = db()->prepare('INSERT INTO projects (slug, title, summary, description, category, cover_media_id, cover_url, status, sort_order) VALUES (:slug, :title, :summary, :description, :category, :cover_media_id, :cover_url, :status, :sort_order)');
-    try { $stmt->execute($fields); } catch (PDOException $e) { if ((string)$e->getCode() === '23000') json_response(['error' => 'A project with this slug already exists.'], 409); throw $e; }
-    json_response(['ok' => true, 'id' => (int)db()->lastInsertId(), 'slug' => $fields['slug']], 201);
+    require_admin(); require_csrf(); $body = request_json(24000); $fields = project_fields($body, false); $gallery = gallery_media_ids($body) ?? [];
+    $pdo = db(); $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare('INSERT INTO projects (slug, title, summary, description, category, cover_media_id, cover_url, status, sort_order) VALUES (:slug, :title, :summary, :description, :category, :cover_media_id, :cover_url, :status, :sort_order)');
+        $stmt->execute($fields); $id = (int)$pdo->lastInsertId(); sync_project_gallery($id, $gallery); $pdo->commit();
+    } catch (PDOException $e) { $pdo->rollBack(); if ((string)$e->getCode() === '23000') json_response(['error' => 'A project with this slug already exists.'], 409); throw $e; }
+    json_response(['ok' => true, 'id' => $id, 'slug' => $fields['slug']], 201);
 }
 
 function handle_project_update(int $id): never {
-    require_admin(); require_csrf(); $fields = project_fields(request_json(24000), true);
-    if (!$fields) json_response(['error' => 'Provide at least one project field to update.'], 422);
-    $sets = []; foreach (array_keys($fields) as $field) $sets[] = "{$field} = :{$field}";
-    $stmt = db()->prepare('UPDATE projects SET ' . implode(', ', $sets) . ', updated_at = CURRENT_TIMESTAMP WHERE id = :id'); $fields['id'] = $id;
-    try { $stmt->execute($fields); } catch (PDOException $e) { if ((string)$e->getCode() === '23000') json_response(['error' => 'A project with this slug already exists.'], 409); throw $e; }
-    if ($stmt->rowCount() === 0) { $check = db()->prepare('SELECT id FROM projects WHERE id = :id'); $check->execute(['id' => $id]); if (!$check->fetch()) json_response(['error' => 'Project not found.'], 404); }
+    require_admin(); require_csrf(); $body = request_json(24000); $fields = project_fields($body, true); $gallery = gallery_media_ids($body);
+    if (!$fields && $gallery === null) json_response(['error' => 'Provide at least one project field or gallery image list to update.'], 422);
+    $pdo = db(); $pdo->beginTransaction();
+    try {
+        $check = $pdo->prepare('SELECT id FROM projects WHERE id = :id'); $check->execute(['id' => $id]); if (!$check->fetch()) { $pdo->rollBack(); json_response(['error' => 'Project not found.'], 404); }
+        if ($fields) { $sets = []; foreach (array_keys($fields) as $field) $sets[] = "{$field} = :{$field}"; $fields['id'] = $id; $stmt = $pdo->prepare('UPDATE projects SET ' . implode(', ', $sets) . ', updated_at = CURRENT_TIMESTAMP WHERE id = :id'); $stmt->execute($fields); }
+        if ($gallery !== null) sync_project_gallery($id, $gallery);
+        $pdo->commit();
+    } catch (PDOException $e) { $pdo->rollBack(); if ((string)$e->getCode() === '23000') json_response(['error' => 'A project with this slug already exists.'], 409); throw $e; }
     json_response(['ok' => true, 'id' => $id]);
 }
 
