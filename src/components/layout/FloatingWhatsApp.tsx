@@ -1,4 +1,4 @@
-import { MessageCircle } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
 import { COMPANY } from "@/lib/company";
 
 const ghanaPhone = COMPANY.phones.find((phone) => phone.country === "Ghana");
@@ -16,7 +16,7 @@ export default function FloatingWhatsApp() {
       rel="noopener noreferrer"
       aria-label={`Chat with OVC on WhatsApp at ${ghanaPhone.display}`}
     >
-      <MessageCircle size={22} strokeWidth={2.25} aria-hidden="true" />
+      <SiWhatsapp size={22} aria-hidden="true" />
       <span>WhatsApp</span>
     </a>
   );
