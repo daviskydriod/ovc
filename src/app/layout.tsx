@@ -4,6 +4,7 @@ import "@fontsource-variable/montserrat/index.css";
 import "./globals.css";
 import SiteHeader from "@/components/layout/SiteHeader";
 import SiteFooter from "@/components/layout/SiteFooter";
+import FloatingWhatsApp from "@/components/layout/FloatingWhatsApp";
 import { COMPANY, getVerifiedPublicOrigin } from "@/lib/company";
 
 const publicOrigin = getVerifiedPublicOrigin();
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <SiteHeader />
         {children}
         <SiteFooter />
+        <FloatingWhatsApp />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization).replace(/</g, "\\u003c") }} />
       </body>
     </html>

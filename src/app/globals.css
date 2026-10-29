@@ -781,3 +781,11 @@ main, header, footer, section, .shell, .admin-shell { min-width: 0; max-width: 1
 img, svg, video, canvas { max-width: 100%; }
 .header-inner > *, .hero-grid > *, .project-feature > *, .about-split > *, .page-hero-grid > *, .contact-grid > *, .cta-panel > *, .footer-main > *, .footer-bottom > *, .admin-dashboard-heading > *, .admin-project-toolbar > * { min-width: 0; }
 h1, h2, h3, h4, p, a, li, code { overflow-wrap: anywhere; }
+
+.floating-whatsapp { position: fixed; right: 24px; bottom: 24px; z-index: 40; display: inline-flex; align-items: center; gap: 9px; min-height: 52px; padding: 0 18px; color: var(--white); background: #168c4b; border: 2px solid var(--white); border-radius: 999px; box-shadow: 0 8px 24px rgb(11 27 53 / 22%); font-size: 12px; font-weight: 800; letter-spacing: .06em; line-height: 1; text-transform: uppercase; transition: background-color .18s ease, transform .18s ease, box-shadow .18s ease; }
+.floating-whatsapp:hover { color: var(--white); background: #11733d; box-shadow: 0 10px 28px rgb(11 27 53 / 28%); transform: translateY(-2px); }
+.floating-whatsapp:focus-visible { outline-color: var(--gold); outline-offset: 4px; }
+
+@media (max-width: 600px) {
+  .floating-whatsapp { right: 16px; bottom: 16px; min-height: 48px; padding: 0 15px; }
+}
