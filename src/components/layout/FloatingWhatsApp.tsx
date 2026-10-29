@@ -17,7 +17,6 @@ export default function FloatingWhatsApp() {
       aria-label={`Chat with OVC on WhatsApp at ${ghanaPhone.display}`}
     >
       <SiWhatsapp size={22} aria-hidden="true" />
-      <span>WhatsApp</span>
     </a>
   );
 }
